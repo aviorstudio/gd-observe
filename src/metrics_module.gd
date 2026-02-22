@@ -9,18 +9,18 @@ class MetricsConfig extends RefCounted:
 		self.enabled = enabled
 		self.max_samples_per_metric = max_samples_per_metric
 
-static var _config: MetricsConfig = MetricsConfig.new()
-static var _metrics: Dictionary = {}
+var _config: MetricsConfig = MetricsConfig.new()
+var _metrics: Dictionary = {}
 
-static func configure(config: MetricsConfig) -> void:
+func configure(config: MetricsConfig) -> void:
 	_config = config if config else MetricsConfig.new()
 
-static func begin_timer(metrics_enabled: bool) -> int:
+func begin_timer(metrics_enabled: bool) -> int:
 	if not _config.enabled or not metrics_enabled:
 		return -1
 	return Time.get_ticks_usec()
 
-static func record(
+func record(
 	service_name: String,
 	metric_name: String,
 	duration_usec: int
@@ -44,7 +44,7 @@ static func record(
 	service_metrics[metric_name] = metric_samples
 	_metrics[service_name] = service_metrics
 
-static func finish_void(
+func finish_void(
 	recorder: Object,
 	service_name: String,
 	metric_name: String,
@@ -54,7 +54,7 @@ static func finish_void(
 		return
 	record(service_name, metric_name, Time.get_ticks_usec() - start_time_usec)
 
-static func finish_array(
+func finish_array(
 	recorder: Object,
 	service_name: String,
 	metric_name: String,
@@ -64,11 +64,11 @@ static func finish_array(
 	finish_void(recorder, service_name, metric_name, start_time_usec)
 	return result
 
-static func get_metrics() -> Dictionary:
+func get_metrics() -> Dictionary:
 	if not _config.enabled:
 		return {}
 	return _metrics.duplicate(true)
 
-static func clear() -> void:
+func clear() -> void:
 	_metrics.clear()
 
