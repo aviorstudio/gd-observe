@@ -6,6 +6,7 @@ func _initialize() -> void:
 	var failures: Array[String] = []
 	_test_summary_percentiles_and_trim(failures)
 	_test_get_all_summaries_and_reset(failures)
+	_test_enabled_and_finish_and_return(failures)
 
 	if failures.is_empty():
 		print("PASS gd-metrics metrics_module_test")
@@ -65,3 +66,22 @@ func _test_get_all_summaries_and_reset(failures: Array[String]) -> void:
 	metrics.reset()
 	if not metrics.get_all_summaries().is_empty():
 		failures.append("Expected reset() with empty service to clear all metrics")
+
+func _test_enabled_and_finish_and_return(failures: Array[String]) -> void:
+	var metrics := MetricsModule.new()
+	metrics.configure(MetricsModule.MetricsConfig.new(false, 10))
+	if metrics.is_enabled():
+		failures.append("Expected is_enabled() to reflect disabled configuration")
+
+	metrics.configure(MetricsModule.MetricsConfig.new(true, 10))
+	if not metrics.is_enabled():
+		failures.append("Expected is_enabled() to reflect enabled configuration")
+
+	var start_time_usec: int = metrics.begin_timer(true)
+	var value: String = str(metrics.finish_and_return(start_time_usec, "Svc", "pass_through", "ok"))
+	if value != "ok":
+		failures.append("Expected finish_and_return() to return the original value")
+
+	var summary: MetricsModule.MetricsSummary = metrics.get_summary("Svc", "pass_through")
+	if summary.count != 1:
+		failures.append("Expected finish_and_return() to record a metric sample")

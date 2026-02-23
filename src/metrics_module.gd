@@ -4,7 +4,9 @@ extends RefCounted
 
 ## Runtime metrics configuration.
 class MetricsConfig extends RefCounted:
+	## Enables/disables metric capture.
 	var enabled: bool
+	## Maximum retained samples per service/metric stream.
 	var max_samples_per_metric: int
 
 	func _init(enabled: bool = true, max_samples_per_metric: int = 60) -> void:
@@ -13,26 +15,43 @@ class MetricsConfig extends RefCounted:
 
 ## Aggregated metrics summary for a single metric stream.
 class MetricsSummary extends RefCounted:
+	## Number of captured samples.
 	var count: int = 0
+	## Sum of all captured sample durations in microseconds.
 	var total_usec: int = 0
+	## Minimum observed duration in microseconds.
 	var min_usec: int = 0
+	## Maximum observed duration in microseconds.
 	var max_usec: int = 0
+	## Average observed duration in microseconds.
 	var avg_usec: float = 0.0
+	## 50th percentile duration in microseconds.
 	var p50_usec: int = 0
+	## 95th percentile duration in microseconds.
 	var p95_usec: int = 0
+	## 99th percentile duration in microseconds.
 	var p99_usec: int = 0
 
 var _config: MetricsConfig = MetricsConfig.new()
 var _metrics: Dictionary = {}
 
+## Applies runtime metrics configuration.
 func configure(config: MetricsConfig) -> void:
 	_config = config if config else MetricsConfig.new()
 
+## Returns whether metrics capture is enabled.
+func is_enabled() -> bool:
+	return _config.enabled
+
+## Starts a timer for a call site and returns the current microsecond timestamp.
+##
+## Returns `-1` when capture is disabled for this call site.
 func begin_timer(metrics_enabled: bool) -> int:
 	if not _config.enabled or not metrics_enabled:
 		return -1
 	return Time.get_ticks_usec()
 
+## Records one metric sample duration.
 func record(
 	service_name: String,
 	metric_name: String,
@@ -57,6 +76,7 @@ func record(
 	service_metrics[metric_name] = metric_samples
 	_metrics[service_name] = service_metrics
 
+## Finishes a timer and records the elapsed microseconds.
 func finish_void(
 	recorder: Object,
 	service_name: String,
@@ -67,6 +87,7 @@ func finish_void(
 		return
 	record(service_name, metric_name, Time.get_ticks_usec() - start_time_usec)
 
+## Finishes a timer, records elapsed time, and returns the provided array value.
 func finish_array(
 	recorder: Object,
 	service_name: String,
@@ -77,11 +98,24 @@ func finish_array(
 	finish_void(recorder, service_name, metric_name, start_time_usec)
 	return result
 
+## Finishes a timer, records elapsed time, and returns the provided value unchanged.
+func finish_and_return(
+	start_time_usec: int,
+	service_name: String,
+	metric_name: String,
+	value: Variant
+) -> Variant:
+	if start_time_usec >= 0:
+		record(service_name, metric_name, Time.get_ticks_usec() - start_time_usec)
+	return value
+
+## Returns a deep copy of all recorded raw metric samples.
 func get_metrics() -> Dictionary:
 	if not _config.enabled:
 		return {}
 	return _metrics.duplicate(true)
 
+## Returns an aggregate summary for one service/metric stream.
 func get_summary(service_name: String, metric_name: String) -> MetricsSummary:
 	var summary := MetricsSummary.new()
 	if not _config.enabled:
@@ -109,6 +143,7 @@ func get_summary(service_name: String, metric_name: String) -> MetricsSummary:
 	summary.p99_usec = _percentile(samples, 0.99)
 	return summary
 
+## Returns aggregate summaries for every service/metric stream.
 func get_all_summaries() -> Dictionary[String, Dictionary]:
 	var result: Dictionary[String, Dictionary] = {}
 	if not _config.enabled:
@@ -123,6 +158,7 @@ func get_all_summaries() -> Dictionary[String, Dictionary]:
 
 	return result
 
+## Clears metrics for one service, or for all services when empty.
 func reset(service_name: String = "") -> void:
 	if service_name.is_empty():
 		_metrics.clear()
@@ -130,6 +166,7 @@ func reset(service_name: String = "") -> void:
 	if _metrics.has(service_name):
 		_metrics.erase(service_name)
 
+## Clears all stored metrics.
 func clear() -> void:
 	_metrics.clear()
 
