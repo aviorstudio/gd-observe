@@ -1,6 +1,8 @@
+## In-memory metrics sampler and aggregation helper.
 class_name MetricsModule
 extends RefCounted
 
+## Runtime metrics configuration.
 class MetricsConfig extends RefCounted:
 	var enabled: bool
 	var max_samples_per_metric: int
@@ -9,6 +11,7 @@ class MetricsConfig extends RefCounted:
 		self.enabled = enabled
 		self.max_samples_per_metric = max_samples_per_metric
 
+## Aggregated metrics summary for a single metric stream.
 class MetricsSummary extends RefCounted:
 	var count: int = 0
 	var total_usec: int = 0
