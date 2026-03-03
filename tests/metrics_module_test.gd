@@ -35,12 +35,12 @@ func _test_summary_percentiles_and_trim(failures: Array[String]) -> void:
 		failures.append("Expected total_usec=200")
 	if not is_equal_approx(summary.avg_usec, 40.0):
 		failures.append("Expected avg_usec=40.0")
-	if summary.p50_usec != 40:
-		failures.append("Expected p50_usec=40")
-	if summary.p95_usec != 60:
-		failures.append("Expected p95_usec=60")
-	if summary.p99_usec != 60:
-		failures.append("Expected p99_usec=60")
+	if summary.p50 != 40:
+		failures.append("Expected p50=40")
+	if summary.p95 != 60:
+		failures.append("Expected p95=60")
+	if summary.p99 != 60:
+		failures.append("Expected p99=60")
 
 func _test_get_all_summaries_and_reset(failures: Array[String]) -> void:
 	var metrics := MetricsModule.new()

@@ -26,11 +26,11 @@ class MetricsSummary extends RefCounted:
 	## Average observed duration in microseconds.
 	var avg_usec: float = 0.0
 	## 50th percentile duration in microseconds.
-	var p50_usec: int = 0
+	var p50: int = 0
 	## 95th percentile duration in microseconds.
-	var p95_usec: int = 0
+	var p95: int = 0
 	## 99th percentile duration in microseconds.
-	var p99_usec: int = 0
+	var p99: int = 0
 
 var _config: MetricsConfig = MetricsConfig.new()
 var _metrics: Dictionary = {}
@@ -138,9 +138,9 @@ func get_summary(service_name: String, metric_name: String) -> MetricsSummary:
 	for sample in samples:
 		summary.total_usec += sample
 	summary.avg_usec = float(summary.total_usec) / float(summary.count)
-	summary.p50_usec = _percentile(samples, 0.50)
-	summary.p95_usec = _percentile(samples, 0.95)
-	summary.p99_usec = _percentile(samples, 0.99)
+	summary.p50 = _percentile(samples, 0.50)
+	summary.p95 = _percentile(samples, 0.95)
+	summary.p99 = _percentile(samples, 0.99)
 	return summary
 
 ## Returns aggregate summaries for every service/metric stream.
