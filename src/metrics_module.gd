@@ -170,6 +170,36 @@ func reset(service_name: String = "") -> void:
 func clear() -> void:
 	_metrics.clear()
 
+## Returns all summaries as an exportable array of flat dictionaries.
+func export_summaries() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var all: Dictionary[String, Dictionary] = get_all_summaries()
+	for service_name: String in all:
+		var service_metrics: Dictionary = all[service_name]
+		for metric_name: String in service_metrics:
+			var summary: MetricsSummary = service_metrics[metric_name]
+			result.append({
+				"service": service_name,
+				"metric": metric_name,
+				"count": summary.count,
+				"total_usec": summary.total_usec,
+				"min_usec": summary.min_usec,
+				"max_usec": summary.max_usec,
+				"avg_usec": summary.avg_usec,
+			})
+	return result
+
+## Serializes all metric summaries to JSON and writes to a file.
+func export_to_file(file_path: String) -> bool:
+	var summaries: Array[Dictionary] = export_summaries()
+	var json_string: String = JSON.stringify(summaries, "\t")
+	var file := FileAccess.open(file_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(json_string)
+	file.close()
+	return true
+
 func _percentile(sorted_samples: Array[int], percentile: float) -> int:
 	if sorted_samples.is_empty():
 		return 0

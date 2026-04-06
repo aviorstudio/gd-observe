@@ -7,6 +7,8 @@ func _initialize() -> void:
 	_test_summary_percentiles_and_trim(failures)
 	_test_get_all_summaries_and_reset(failures)
 	_test_enabled_and_finish_and_return(failures)
+	_test_export_summaries(failures)
+	_test_export_to_file(failures)
 
 	if failures.is_empty():
 		print("PASS gd-metrics metrics_module_test")
@@ -85,3 +87,41 @@ func _test_enabled_and_finish_and_return(failures: Array[String]) -> void:
 	var summary: MetricsModule.MetricsSummary = metrics.get_summary("Svc", "pass_through")
 	if summary.count != 1:
 		failures.append("Expected finish_and_return() to record a metric sample")
+
+func _test_export_summaries(failures: Array[String]) -> void:
+	var metrics := MetricsModule.new()
+	metrics.configure(MetricsModule.MetricsConfig.new(true, 60))
+	metrics.record("TestService", "latency", 1000)
+	metrics.record("TestService", "latency", 2000)
+	var exported: Array[Dictionary] = metrics.export_summaries()
+	if exported.size() != 1:
+		failures.append("export: expected 1 summary entry, got %d" % exported.size())
+		return
+	if str(exported[0].get("service", "")) != "TestService":
+		failures.append("export: service name mismatch")
+	if int(exported[0].get("count", 0)) != 2:
+		failures.append("export: sample count mismatch")
+	# Verify clear/export interaction
+	metrics.clear()
+	var after_clear: Array[Dictionary] = metrics.export_summaries()
+	if not after_clear.is_empty():
+		failures.append("export: expected empty after clear, got %d" % after_clear.size())
+
+func _test_export_to_file(failures: Array[String]) -> void:
+	var metrics := MetricsModule.new()
+	metrics.configure(MetricsModule.MetricsConfig.new(true, 60))
+	metrics.record("FileSvc", "op", 500)
+	var test_path: String = "user://test_metrics_export.json"
+	var success: bool = metrics.export_to_file(test_path)
+	if not success:
+		failures.append("export_to_file: expected true return")
+		return
+	var file := FileAccess.open(test_path, FileAccess.READ)
+	if file == null:
+		failures.append("export_to_file: file not created")
+		return
+	var content: String = file.get_as_text()
+	file.close()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(test_path))
+	if not content.contains("FileSvc"):
+		failures.append("export_to_file: expected JSON to contain service name")
