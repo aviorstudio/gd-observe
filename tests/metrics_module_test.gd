@@ -1,6 +1,6 @@
 extends SceneTree
 
-const MetricsModule = preload("res://src/metrics_module.gd")
+const MetricsModule = preload("res://addon/src/metrics_module.gd")
 
 func _initialize() -> void:
 	var failures: Array[String] = []
