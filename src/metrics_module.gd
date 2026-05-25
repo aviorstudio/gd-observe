@@ -97,6 +97,28 @@ func finish_array(
 	finish_void(recorder, service_name, metric_name, start_time_usec)
 	return result
 
+## Finishes a timer, records elapsed time, and returns the provided dictionary value.
+func finish_dictionary(
+	start_time_usec: int,
+	service_name: String,
+	metric_name: String,
+	result: Dictionary
+) -> Dictionary:
+	if start_time_usec >= 0:
+		record(service_name, metric_name, Time.get_ticks_usec() - start_time_usec)
+	return result
+
+## Finishes a timer, records elapsed time, and returns the provided bool value.
+func finish_bool(
+	start_time_usec: int,
+	service_name: String,
+	metric_name: String,
+	result: bool
+) -> bool:
+	if start_time_usec >= 0:
+		record(service_name, metric_name, Time.get_ticks_usec() - start_time_usec)
+	return result
+
 ## Finishes a timer, records elapsed time, and returns the provided value unchanged.
 func finish_and_return(
 	start_time_usec: int,
@@ -208,4 +230,3 @@ func _percentile(sorted_samples: Array[int], percentile: float) -> int:
 	index = maxi(index, 0)
 	index = mini(index, sorted_samples.size() - 1)
 	return sorted_samples[index]
-
