@@ -67,15 +67,18 @@ jobs:
         run: |
           set -euo pipefail
           test -f addon/plugin.cfg
+          rm -rf dist
+          mkdir -p dist
           repo_owner="${GITHUB_REPOSITORY%%/*}"
           addon_dir="@${repo_owner}_${GITHUB_REPOSITORY#*/}"
-          package_root="dist/${addon_dir}"
+          package_root="${RUNNER_TEMP}/addon-package/${addon_dir}"
+          rm -rf "${RUNNER_TEMP}/addon-package"
           mkdir -p "$package_root"
           cp addon/plugin.cfg addon/plugin.gd "$package_root/"
           cp addon/*.uid "$package_root/" 2>/dev/null || true
           if [ -f addon/autoload.gd ]; then cp addon/autoload.gd "$package_root/"; fi
           if [ -d addon/src ]; then cp -R addon/src "$package_root/"; fi
-          (cd "$package_root" && zip -r "../${addon_dir}.zip" .)
+          (cd "$package_root" && zip -r "${GITHUB_WORKSPACE}/dist/${addon_dir}.zip" .)
 
       - uses: actions/setup-go@v5
         if: ${{ hashFiles('cli/go.mod') != '' }}
