@@ -474,7 +474,7 @@ func (m model) renderHeader() string {
 	if m.connected {
 		state = okStyle.Render(m.status)
 	}
-	return titleStyle.Render("gd-metrics") + " " + statusStyle.Render(m.layoutMode()) + " " + statusStyle.Render(m.addr) + " " + state
+	return titleStyle.Render("gd-observe") + " " + statusStyle.Render(m.layoutMode()) + " " + statusStyle.Render(m.addr) + " " + state
 }
 
 func (m model) renderOverview() string {
@@ -579,7 +579,7 @@ func (m model) renderSelectedMetric() string {
 func (m model) renderLogsTab() string {
 	lines := []string{sectionStyle.Render("Logs") + " " + statusStyle.Render(fmt.Sprintf("count=%d", len(m.logs)))}
 	if len(m.logs) == 0 {
-		lines = append(lines, statusStyle.Render("waiting for explicit GdMetrics.log entries"))
+		lines = append(lines, statusStyle.Render("waiting for explicit GdObserve.log entries"))
 		return strings.Join(lines, "\n")
 	}
 	lines = append(lines, m.renderSelectedLog())
@@ -604,7 +604,7 @@ func (m model) renderLogsTab() string {
 func (m model) renderEventsTab() string {
 	lines := []string{sectionStyle.Render("Events") + " " + statusStyle.Render(fmt.Sprintf("count=%d", len(m.events)))}
 	if len(m.events) == 0 {
-		lines = append(lines, statusStyle.Render("waiting for explicit GdMetrics.event entries"))
+		lines = append(lines, statusStyle.Render("waiting for explicit GdObserve.event entries"))
 		return strings.Join(lines, "\n")
 	}
 	lines = append(lines, m.renderSelectedEvent())
@@ -1465,7 +1465,7 @@ func writeTextFile(path string, value string) error {
 
 func runCapture(addr string, timeout time.Duration, duration time.Duration, outDir string, options map[string]any) error {
 	if outDir == "" {
-		outDir = "gd-metrics-capture"
+		outDir = "gd-observe-capture"
 	}
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return err
@@ -1864,7 +1864,7 @@ func frameTraceSummary(traces []frameTrace) map[string]any {
 func renderSummaryMarkdown(snap snapshot, diag map[string]any) string {
 	summary := summarizeSnapshot(snap, 10)
 	var b strings.Builder
-	b.WriteString("# gd-metrics Capture Summary\n\n")
+	b.WriteString("# gd-observe Capture Summary\n\n")
 	b.WriteString(fmt.Sprintf("- Metrics: %d (%d timers, %d gauges, %d counters)\n", snap.MetricCount, snap.TimerCount, snap.GaugeCount, snap.CounterCount))
 	b.WriteString(fmt.Sprintf("- Runtime: fps %.1f, frame %s, process %s\n", snap.Runtime.FPS, formatUsec(float64(snap.Runtime.FrameDeltaUsec)), formatUsec(float64(snap.Runtime.ProcessTimeUsec))))
 	b.WriteString(fmt.Sprintf("- Nodes: %d, orphans: %d, memory: %s\n\n", snap.Runtime.NodeCount, snap.Runtime.OrphanNodeCount, formatBytes(snap.Runtime.MemoryStaticBytes)))
@@ -1964,7 +1964,7 @@ func main() {
 		mode = args[0]
 		args = args[1:]
 	}
-	fs := flag.NewFlagSet("gd-metrics", flag.ExitOnError)
+	fs := flag.NewFlagSet("gd-observe", flag.ExitOnError)
 	addr := defaultAddr
 	timeout := 10 * time.Second
 	waitFor := "snapshot"
@@ -1981,12 +1981,12 @@ func main() {
 	limit := 0
 	includeRaw := false
 	includeTraces := false
-	outDir := "gd-metrics-capture"
+	outDir := "gd-observe-capture"
 	duration := 0 * time.Second
 	inputFile := ""
 	budgetFile := ""
-	fs.StringVar(&addr, "addr", defaultAddr, "gd-metrics WebSocket URL")
-	fs.StringVar(&addr, "url", defaultAddr, "gd-metrics WebSocket URL")
+	fs.StringVar(&addr, "addr", defaultAddr, "gd-observe WebSocket URL")
+	fs.StringVar(&addr, "url", defaultAddr, "gd-observe WebSocket URL")
 	fs.DurationVar(&timeout, "timeout", 10*time.Second, "timeout for machine-readable commands")
 	fs.DurationVar(&duration, "duration", 0, "capture/stream duration")
 	fs.StringVar(&waitFor, "for", "snapshot", "wait target: snapshot, log, event, trace")
@@ -2003,7 +2003,7 @@ func main() {
 	fs.IntVar(&limit, "limit", 0, "maximum metrics returned")
 	fs.BoolVar(&includeRaw, "raw", false, "include raw timer samples")
 	fs.BoolVar(&includeTraces, "traces", false, "include recent frame traces in snapshots")
-	fs.StringVar(&outDir, "out", "gd-metrics-capture", "output directory for capture")
+	fs.StringVar(&outDir, "out", "gd-observe-capture", "output directory for capture")
 	fs.StringVar(&inputFile, "file", "", "input snapshot JSON file")
 	fs.StringVar(&budgetFile, "budget", "", "budget assertion JSON file")
 	if err := fs.Parse(args); err != nil {

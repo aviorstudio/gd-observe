@@ -9,7 +9,7 @@ func _initialize() -> void:
 	_test_autoload_facade(failures)
 
 	if failures.is_empty():
-		print("PASS gd-metrics metrics_autoload_test")
+		print("PASS gd-observe metrics_autoload_test")
 		quit(0)
 		return
 

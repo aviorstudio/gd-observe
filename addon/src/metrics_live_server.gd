@@ -64,13 +64,13 @@ func start_server(metrics_module: RefCounted, config: MetricsLiveServerConfig = 
 	_last_snapshot_msec = 0
 	set_process(true)
 	if _metrics_module.has_method("event"):
-		_metrics_module.event("gd_metrics.live_server_started", {"host": _config.host}, {"port": get_port()})
+		_metrics_module.event("gd_observe.live_server_started", {"host": _config.host}, {"port": get_port()})
 	return OK
 
 func stop() -> void:
 	set_process(false)
 	if _metrics_module != null and _metrics_module.has_method("event") and _server.is_listening():
-		_metrics_module.event("gd_metrics.live_server_stopped", {"host": _config.host}, {"port": get_port()})
+		_metrics_module.event("gd_observe.live_server_stopped", {"host": _config.host}, {"port": get_port()})
 	_disconnect_metric_stream()
 	for peer_id: int in _peers.keys():
 		var state: Dictionary = _peers[peer_id]
@@ -162,7 +162,7 @@ func _send_hello(peer_id: int, peer: WebSocketPeer) -> void:
 		"type": "hello",
 		"version": 2,
 		"peer_id": peer_id,
-		"server": "gd-metrics",
+		"server": "gd-observe",
 		"url": get_url(),
 		"read_only": true,
 		"supports_filtered_snapshots": true,
@@ -246,7 +246,7 @@ func _handle_client_packet(peer_id: int, payload: String) -> void:
 func _record_send_failure(error: Error, message_type: String, size_bytes: int) -> void:
 	if _metrics_module == null or not _metrics_module.has_method("event"):
 		return
-	_metrics_module.event("gd_metrics.live_send_failed", {"type": message_type}, {"error": error, "size_bytes": size_bytes})
+	_metrics_module.event("gd_observe.live_send_failed", {"type": message_type}, {"error": error, "size_bytes": size_bytes})
 
 func _connect_metric_stream() -> void:
 	if _metrics_module == null:

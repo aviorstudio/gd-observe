@@ -7,7 +7,7 @@ func _initialize() -> void:
 	_test_runtime_snapshot_shape(failures)
 
 	if failures.is_empty():
-		print("PASS gd-metrics metrics_runtime_sampler_test")
+		print("PASS gd-observe metrics_runtime_sampler_test")
 		quit(0)
 		return
 

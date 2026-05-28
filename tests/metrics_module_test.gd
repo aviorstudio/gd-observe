@@ -13,7 +13,7 @@ func _initialize() -> void:
 	_test_export_to_file(failures)
 
 	if failures.is_empty():
-		print("PASS gd-metrics metrics_module_test")
+		print("PASS gd-observe metrics_module_test")
 		quit(0)
 		return
 

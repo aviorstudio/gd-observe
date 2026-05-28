@@ -8,7 +8,7 @@ func _initialize() -> void:
 	await _test_start_stop_and_snapshot(failures)
 
 	if failures.is_empty():
-		print("PASS gd-metrics metrics_live_server_test")
+		print("PASS gd-observe metrics_live_server_test")
 		quit(0)
 		return
 

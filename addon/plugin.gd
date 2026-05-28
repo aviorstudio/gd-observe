@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-const AUTOLOAD_NAME := "GdMetrics"
+const AUTOLOAD_NAME := "GdObserve"
 const AUTOLOAD_SCRIPT := "autoload.gd"
 
 var _added_autoload: bool = false

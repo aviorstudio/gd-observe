@@ -94,7 +94,7 @@ jobs:
             arch="${target#*/}"
             suffix=""
             if [ "$os" = "windows" ]; then suffix=".exe"; fi
-            output="../dist/gd-metrics-${os}-${arch}${suffix}"
+            output="../dist/gd-observe-${os}-${arch}${suffix}"
             GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$output" .
           done
 

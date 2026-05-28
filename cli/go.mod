@@ -1,4 +1,4 @@
-module github.com/aviorstudio/gd-metrics/cli
+module github.com/aviorstudio/gd-observe/cli
 
 go 1.24.5
 

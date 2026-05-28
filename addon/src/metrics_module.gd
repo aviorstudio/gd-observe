@@ -12,7 +12,7 @@ const KIND_COUNTER: String = "counter"
 const UNIT_USEC: String = "usec"
 const UNIT_COUNT: String = "count"
 const UNIT_VALUE: String = "value"
-const EVENT_INTERNAL_PREFIX: String = "gd_metrics."
+const EVENT_INTERNAL_PREFIX: String = "gd_observe."
 
 ## Runtime metrics configuration.
 class MetricsConfig extends RefCounted:
@@ -76,7 +76,7 @@ class MetricsSpan extends RefCounted:
 		}
 		checkpoints.append(entry)
 		_metrics.record_timer(path + ".checkpoint", elapsed_usec, checkpoint_tags)
-		_metrics.event("gd_metrics.span_checkpoint", checkpoint_tags, checkpoint_fields)
+		_metrics.event("gd_observe.span_checkpoint", checkpoint_tags, checkpoint_fields)
 		return entry
 
 	func finish(extra_tags: Dictionary = {}, fields: Dictionary = {}) -> int:
@@ -91,7 +91,7 @@ class MetricsSpan extends RefCounted:
 		var event_fields: Dictionary = fields.duplicate(true)
 		event_fields["duration_usec"] = duration_usec
 		event_fields["checkpoint_count"] = checkpoints.size()
-		_metrics.event("gd_metrics.span_finished", finish_tags, event_fields)
+		_metrics.event("gd_observe.span_finished", finish_tags, event_fields)
 		return duration_usec
 
 var _config: MetricsConfig = MetricsConfig.new()
@@ -280,7 +280,7 @@ func event(name: String, tags: Dictionary = {}, fields: Dictionary = {}) -> Dict
 ## Captures the next frame_count traces even when continuous trace streaming is disabled.
 func capture_trace_frames(frame_count: int) -> void:
 	_trigger_trace_frames_remaining = maxi(_trigger_trace_frames_remaining, maxi(frame_count, 0))
-	event("gd_metrics.trace_capture_requested", {}, {"frames": frame_count})
+	event("gd_observe.trace_capture_requested", {}, {"frames": frame_count})
 
 func checkpoint_runtime(name: String, runtime_snapshot: Dictionary = {}, tags: Dictionary = {}) -> Dictionary[String, Variant]:
 	var normalized_name: String = _normalize_path(name)
@@ -293,7 +293,7 @@ func checkpoint_runtime(name: String, runtime_snapshot: Dictionary = {}, tags: D
 		"runtime": runtime_snapshot.duplicate(true),
 	}
 	_runtime_checkpoints[normalized_name] = checkpoint.duplicate(true)
-	event("gd_metrics.runtime_checkpoint", {"checkpoint": normalized_name}, {"runtime": runtime_snapshot.duplicate(true)})
+	event("gd_observe.runtime_checkpoint", {"checkpoint": normalized_name}, {"runtime": runtime_snapshot.duplicate(true)})
 	return checkpoint
 
 ## Returns one timer summary dictionary, or an empty dictionary when absent.
@@ -413,14 +413,14 @@ func reset(path: String = "", tags: Dictionary = {}) -> void:
 		_recent_frame_traces.clear()
 		_runtime_checkpoints.clear()
 		_trace_frame_id = -1
-		event("gd_metrics.reset", {}, {"scope": "all"})
+		event("gd_observe.reset", {}, {"scope": "all"})
 		return
 	var normalized_tags: Dictionary[String, Variant] = _normalize_tags(tags)
 	var key: String = _metric_key(normalized_path, normalized_tags)
 	_timers.erase(key)
 	_gauges.erase(key)
 	_counters.erase(key)
-	event("gd_metrics.reset", normalized_tags, {"path": normalized_path})
+	event("gd_observe.reset", normalized_tags, {"path": normalized_path})
 
 ## Clears all stored metrics.
 func clear() -> void:

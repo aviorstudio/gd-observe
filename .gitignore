@@ -1,4 +1,4 @@
 .DS_Store
 dist/
-cli/gd-metrics
+cli/gd-observe
 cli/bin/
