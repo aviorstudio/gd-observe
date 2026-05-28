@@ -81,6 +81,7 @@ jobs:
         if: ${{ hashFiles('cli/go.mod') != '' }}
         with:
           go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
 
       - name: Build CLI release assets
         if: ${{ hashFiles('cli/go.mod') != '' }}
