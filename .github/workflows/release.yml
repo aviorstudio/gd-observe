@@ -54,10 +54,10 @@ jobs:
             echo "Tag already exists: $tag" >&2
             exit 1
           fi
-          plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' addon/plugin.cfg | head -n 1)"
+          plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' gd/addon/plugin.cfg | head -n 1)"
           if [ "$plugin_version" != "$version" ]; then
-            echo "addon/plugin.cfg version is $plugin_version, but the next $BUMP release is $version." >&2
-            echo "Update addon/plugin.cfg to version=\"$version\", commit it, then rerun this workflow." >&2
+            echo "gd/addon/plugin.cfg version is $plugin_version, but the next $BUMP release is $version." >&2
+            echo "Update gd/addon/plugin.cfg to version=\"$version\", commit it, then rerun this workflow." >&2
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -66,7 +66,7 @@ jobs:
       - name: Package addon
         run: |
           set -euo pipefail
-          test -f addon/plugin.cfg
+          test -f gd/addon/plugin.cfg
           rm -rf dist
           mkdir -p dist
           repo_owner="${GITHUB_REPOSITORY%%/*}"
@@ -74,10 +74,10 @@ jobs:
           package_root="${RUNNER_TEMP}/addon-package/${addon_dir}"
           rm -rf "${RUNNER_TEMP}/addon-package"
           mkdir -p "$package_root"
-          cp addon/plugin.cfg addon/plugin.gd "$package_root/"
-          cp addon/*.uid "$package_root/" 2>/dev/null || true
-          if [ -f addon/autoload.gd ]; then cp addon/autoload.gd "$package_root/"; fi
-          if [ -d addon/src ]; then cp -R addon/src "$package_root/"; fi
+          cp gd/addon/plugin.cfg gd/addon/plugin.gd "$package_root/"
+          cp gd/addon/*.uid "$package_root/" 2>/dev/null || true
+          if [ -f gd/addon/autoload.gd ]; then cp gd/addon/autoload.gd "$package_root/"; fi
+          if [ -d gd/addon/src ]; then cp -R gd/addon/src "$package_root/"; fi
           (cd "$package_root" && zip -r "${GITHUB_WORKSPACE}/dist/${addon_dir}.zip" .)
 
       - uses: actions/setup-go@v5

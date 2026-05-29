@@ -16,10 +16,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate addon package
-        run: test -f addon/plugin.cfg
+        run: test -f gd/addon/plugin.cfg
 
       - name: Install Godot
-        if: ${{ hashFiles('tests/test.sh') != '' }}
+        if: ${{ hashFiles('gd/tests/test.sh') != '' }}
         run: |
           set -euo pipefail
           curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
@@ -27,8 +27,8 @@ jobs:
           sudo install -m 0755 /tmp/godot/Godot_v4.4.1-stable_linux.x86_64 /usr/local/bin/godot
 
       - name: Run Godot tests
-        if: ${{ hashFiles('tests/test.sh') != '' }}
-        run: ./tests/test.sh
+        if: ${{ hashFiles('gd/tests/test.sh') != '' }}
+        run: ./gd/tests/test.sh
 
       - uses: actions/setup-go@v5
         if: ${{ hashFiles('cli/go.mod') != '' }}
