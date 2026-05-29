@@ -3,6 +3,13 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: Release target
+        required: true
+        type: choice
+        options:
+          - gd
+          - cli
       bump:
         description: Version bump
         required: true
@@ -15,7 +22,7 @@ on:
 permissions:
   contents: write
 
-concurrency: release-${{ github.repository }}
+concurrency: release-${{ github.repository }}-${{ inputs.target }}
 
 jobs:
   release:
@@ -28,6 +35,7 @@ jobs:
       - name: Determine release version
         id: release
         env:
+          TARGET: ${{ inputs.target }}
           BUMP: ${{ inputs.bump }}
         run: |
           set -euo pipefail
@@ -35,8 +43,16 @@ jobs:
             echo 'Run releases from the main branch.' >&2
             exit 1
           fi
+          case "$TARGET" in
+            gd) prefix="gd-v" ;;
+            cli) prefix="cli-v" ;;
+            *) echo "Unsupported release target: $TARGET" >&2; exit 1 ;;
+          esac
           git fetch --tags --force
-          latest="$(git tag --list 'v[0-9]*' | sed -E 's/^v//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+          latest="$(git tag --list "${prefix}[0-9]*" | sed -E "s/^${prefix}//" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+          if [ -z "$latest" ]; then
+            latest="$(git tag --list 'v[0-9]*' | sed -E 's/^v//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+          fi
           if [ -z "$latest" ]; then
             version="0.0.1"
           else
@@ -49,21 +65,24 @@ jobs:
             esac
             version="${major}.${minor}.${patch}"
           fi
-          tag="v${version}"
+          tag="${prefix}${version}"
           if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
             echo "Tag already exists: $tag" >&2
             exit 1
           fi
-          plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' gd/addon/plugin.cfg | head -n 1)"
-          if [ "$plugin_version" != "$version" ]; then
-            echo "gd/addon/plugin.cfg version is $plugin_version, but the next $BUMP release is $version." >&2
-            echo "Update gd/addon/plugin.cfg to version=\"$version\", commit it, then rerun this workflow." >&2
-            exit 1
+          if [ "$TARGET" = "gd" ]; then
+            plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' gd/addon/plugin.cfg | head -n 1)"
+            if [ "$plugin_version" != "$version" ]; then
+              echo "gd/addon/plugin.cfg version is $plugin_version, but the next $BUMP release is $version." >&2
+              echo "Update gd/addon/plugin.cfg to version=\"$version\", commit it, then rerun this workflow." >&2
+              exit 1
+            fi
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Package addon
+        if: inputs.target == 'gd'
         run: |
           set -euo pipefail
           test -f gd/addon/plugin.cfg
@@ -81,13 +100,15 @@ jobs:
           (cd "$package_root" && zip -r "${GITHUB_WORKSPACE}/dist/${addon_dir}.zip" .)
 
       - uses: actions/setup-go@v5
-        if: ${{ hashFiles('cli/go.mod') != '' }}
+        if: inputs.target == 'cli'
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
 
       - name: Build CLI release assets
-        if: ${{ hashFiles('cli/go.mod') != '' }}
+        if: inputs.target == 'cli'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
         working-directory: cli
         run: |
           set -euo pipefail
@@ -97,7 +118,7 @@ jobs:
             arch="${target#*/}"
             suffix=""
             if [ "$os" = "windows" ]; then suffix=".exe"; fi
-            output="../dist/gd-observe-${os}-${arch}${suffix}"
+            output="../dist/gd-observe-${TAG}-${os}-${arch}${suffix}"
             GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$output" .
           done
 
@@ -105,9 +126,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.release.outputs.tag }}
-        run: gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG"
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(dist/*.zip dist/gd-observe-*)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo 'No release assets were created.' >&2
+            exit 1
+          fi
+          gh release create "$TAG" "${files[@]}" --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG"
 
       - name: Install GDAM
+        if: inputs.target == 'gd'
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bin"
@@ -115,6 +145,7 @@ jobs:
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       - name: Publish to GDAM
+        if: inputs.target == 'gd'
         env:
           GDAM_SECRET_KEY: ${{ secrets.GDAM_SECRET_KEY }}
           VERSION: ${{ steps.release.outputs.version }}
