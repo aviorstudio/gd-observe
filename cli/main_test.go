@@ -87,7 +87,7 @@ func TestTopRowsAndBudget(t *testing.T) {
 		t.Fatalf("expected Slow as top p95 row, got %#v", rows)
 	}
 	failures := evaluateBudget(snap, map[string]any{
-		"timers": map[string]any{"Slow": map[string]any{"p95_usec": float64(4000)}},
+		"timers":  map[string]any{"Slow": map[string]any{"p95_usec": float64(4000)}},
 		"runtime": map[string]any{"min_fps": float64(60)},
 	})
 	if len(failures) != 2 {
@@ -103,5 +103,11 @@ func TestTagCardinality(t *testing.T) {
 	})
 	if got["route"] != 2 {
 		t.Fatalf("expected route cardinality 2, got %#v", got)
+	}
+}
+
+func TestIsCommandIncludesVersion(t *testing.T) {
+	if !isCommand("version") {
+		t.Fatal("expected version to be a command")
 	}
 }

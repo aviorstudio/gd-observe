@@ -105,22 +105,56 @@ jobs:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
 
+      - name: Test CLI
+        if: inputs.target == 'cli'
+        working-directory: cli
+        run: go test ./...
+
       - name: Build CLI release assets
         if: inputs.target == 'cli'
         env:
-          TAG: ${{ steps.release.outputs.tag }}
-        working-directory: cli
+          VERSION: ${{ steps.release.outputs.version }}
+          COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
-          mkdir -p ../dist
-          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
-            os="${target%/*}"
-            arch="${target#*/}"
-            suffix=""
-            if [ "$os" = "windows" ]; then suffix=".exe"; fi
-            output="../dist/gd-observe-${TAG}-${os}-${arch}${suffix}"
-            GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "$output" .
-          done
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          mkdir -p dist
+
+          build() {
+            goos="$1"
+            goarch="$2"
+            os_label="$3"
+            arch_label="$4"
+            archive_ext="$5"
+            exe=""
+            if [ "$goos" = "windows" ]; then
+              exe=".exe"
+            fi
+
+            name="gd-observe_${os_label}_${arch_label}"
+            out_dir="dist/$name"
+            mkdir -p "$out_dir"
+            out_path="$PWD/$out_dir/gd-observe$exe"
+            (cd cli && GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build -trimpath \
+              -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" \
+              -o "$out_path" .)
+            cp README.md "$out_dir/README.md"
+
+            if [ "$archive_ext" = "zip" ]; then
+              (cd "$out_dir" && zip -q "../$name.zip" "gd-observe$exe" README.md)
+            else
+              tar -C "$out_dir" -czf "dist/$name.tar.gz" "gd-observe$exe" README.md
+            fi
+          }
+
+          build linux amd64 Linux x86_64 tar.gz
+          build linux arm64 Linux arm64 tar.gz
+          build darwin amd64 Darwin x86_64 tar.gz
+          build darwin arm64 Darwin arm64 tar.gz
+          build windows amd64 Windows x86_64 zip
+          build windows arm64 Windows arm64 zip
+
+          (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
 
       - name: Create GitHub Release
         env:
@@ -129,7 +163,10 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          files=(dist/*.zip dist/gd-observe-*)
+          files=(dist/*.tar.gz dist/*.zip)
+          if [ -f dist/checksums.txt ]; then
+            files+=(dist/checksums.txt)
+          fi
           if [ ${#files[@]} -eq 0 ]; then
             echo 'No release assets were created.' >&2
             exit 1

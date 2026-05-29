@@ -27,6 +27,12 @@ const (
 	tabTraces    = 3
 )
 
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+)
+
 type metricRow struct {
 	Path        string         `json:"path"`
 	Key         string         `json:"key"`
@@ -2010,6 +2016,9 @@ func main() {
 		log.Fatal(err)
 	}
 	switch mode {
+	case "version":
+		fmt.Printf("gd-observe %s (%s, %s)\n", version, commit, date)
+		return
 	case "snapshot":
 		options := snapshotOptions(kind, path, pathPrefix, sortBy, limit, includeRaw, includeTraces)
 		if err := runSnapshot(addr, timeout, options); err != nil {
@@ -2081,7 +2090,7 @@ func main() {
 
 func isCommand(value string) bool {
 	switch value {
-	case "watch", "snapshot", "capture", "stream", "status", "wait", "assert", "diagnose", "top", "diff":
+	case "watch", "version", "snapshot", "capture", "stream", "status", "wait", "assert", "diagnose", "top", "diff":
 		return true
 	default:
 		return false
