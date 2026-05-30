@@ -1471,7 +1471,7 @@ func writeTextFile(path string, value string) error {
 
 func runCapture(addr string, timeout time.Duration, duration time.Duration, outDir string, options map[string]any) error {
 	if outDir == "" {
-		outDir = "gd-observe-capture"
+		outDir = "gdobs-capture"
 	}
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return err
@@ -1870,7 +1870,7 @@ func frameTraceSummary(traces []frameTrace) map[string]any {
 func renderSummaryMarkdown(snap snapshot, diag map[string]any) string {
 	summary := summarizeSnapshot(snap, 10)
 	var b strings.Builder
-	b.WriteString("# gd-observe Capture Summary\n\n")
+	b.WriteString("# gdobs Capture Summary\n\n")
 	b.WriteString(fmt.Sprintf("- Metrics: %d (%d timers, %d gauges, %d counters)\n", snap.MetricCount, snap.TimerCount, snap.GaugeCount, snap.CounterCount))
 	b.WriteString(fmt.Sprintf("- Runtime: fps %.1f, frame %s, process %s\n", snap.Runtime.FPS, formatUsec(float64(snap.Runtime.FrameDeltaUsec)), formatUsec(float64(snap.Runtime.ProcessTimeUsec))))
 	b.WriteString(fmt.Sprintf("- Nodes: %d, orphans: %d, memory: %s\n\n", snap.Runtime.NodeCount, snap.Runtime.OrphanNodeCount, formatBytes(snap.Runtime.MemoryStaticBytes)))
@@ -1987,7 +1987,7 @@ func main() {
 	limit := 0
 	includeRaw := false
 	includeTraces := false
-	outDir := "gd-observe-capture"
+	outDir := "gdobs-capture"
 	duration := 0 * time.Second
 	inputFile := ""
 	budgetFile := ""
@@ -2009,7 +2009,7 @@ func main() {
 	fs.IntVar(&limit, "limit", 0, "maximum metrics returned")
 	fs.BoolVar(&includeRaw, "raw", false, "include raw timer samples")
 	fs.BoolVar(&includeTraces, "traces", false, "include recent frame traces in snapshots")
-	fs.StringVar(&outDir, "out", "gd-observe-capture", "output directory for capture")
+	fs.StringVar(&outDir, "out", "gdobs-capture", "output directory for capture")
 	fs.StringVar(&inputFile, "file", "", "input snapshot JSON file")
 	fs.StringVar(&budgetFile, "budget", "", "budget assertion JSON file")
 	if err := fs.Parse(args); err != nil {
