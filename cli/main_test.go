@@ -117,7 +117,7 @@ func TestIsCommandIncludesVersion(t *testing.T) {
 func TestAddrFromJSONEnvFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".env.json")
-	if err := os.WriteFile(path, []byte(`{"metrics_live_server_host":"127.0.0.1","metrics_live_server_port":8766}`), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(`{"gdobs_host":"127.0.0.1","gdobs_port":8766}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got, err := addrFromEnvFile(path)
@@ -151,7 +151,7 @@ func TestAddrFromProjectPrefersGodotClientEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join(clientDir, ".env.json")
-	if err := os.WriteFile(path, []byte(`{"metrics_live_server_port":8767}`), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(`{"gdobs_port":8767}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got, err := addrFromProject(dir)
