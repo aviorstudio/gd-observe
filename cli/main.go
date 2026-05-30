@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +22,8 @@ import (
 
 const (
 	defaultAddr  = "ws://127.0.0.1:8765"
+	defaultHost  = "127.0.0.1"
+	defaultPort  = 8765
 	tabDashboard = 0
 	tabLogs      = 1
 	tabEvents    = 2
@@ -1954,6 +1957,139 @@ func absFloat(value float64) float64 {
 	return value
 }
 
+func resolveAddr(defaultValue, envPath, projectPath string, explicit bool) (string, error) {
+	if explicit {
+		return defaultValue, nil
+	}
+	if envPath != "" {
+		return addrFromEnvFile(envPath)
+	}
+	if projectPath != "" {
+		return addrFromProject(projectPath)
+	}
+	return defaultValue, nil
+}
+
+func addrFromProject(projectPath string) (string, error) {
+	candidates := []string{
+		filepath.Join(projectPath, ".env.json"),
+		filepath.Join(projectPath, ".env"),
+		filepath.Join(projectPath, ".env.example.json"),
+		filepath.Join(projectPath, ".env.example"),
+		filepath.Join(projectPath, "godot_client", ".env.json"),
+		filepath.Join(projectPath, "godot_client", ".env"),
+		filepath.Join(projectPath, "godot_client", ".env.example.json"),
+		filepath.Join(projectPath, "godot_client", ".env.example"),
+	}
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return addrFromEnvFile(candidate)
+		}
+	}
+	return "", fmt.Errorf("no supported env file found under %s", projectPath)
+}
+
+func addrFromEnvFile(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	values, err := parseEndpointEnv(path, data)
+	if err != nil {
+		return "", err
+	}
+	return addrFromValues(values)
+}
+
+func parseEndpointEnv(path string, data []byte) (map[string]any, error) {
+	if strings.HasSuffix(path, ".json") {
+		values := map[string]any{}
+		if err := json.Unmarshal(data, &values); err != nil {
+			return nil, err
+		}
+		return values, nil
+	}
+	values := map[string]any{}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		value = strings.Trim(value, "\"'")
+		values[key] = value
+	}
+	return values, nil
+}
+
+func addrFromValues(values map[string]any) (string, error) {
+	if value := stringValue(values, "metrics_live_server_url", "gdobs_url", "GDOBS_URL"); value != "" {
+		return value, nil
+	}
+	host := stringValue(values, "metrics_live_server_host", "gdobs_host", "GDOBS_HOST")
+	portValue, hasPort, err := intValue(values, "metrics_live_server_port", "gdobs_port", "GDOBS_PORT")
+	if err != nil {
+		return "", err
+	}
+	if host == "" && !hasPort {
+		return "", fmt.Errorf("env file does not define metrics_live_server_url or metrics_live_server_host/port")
+	}
+	if host == "" {
+		host = defaultHost
+	}
+	if strings.HasPrefix(host, "ws://") || strings.HasPrefix(host, "wss://") {
+		return host, nil
+	}
+	if !hasPort {
+		portValue = defaultPort
+	}
+	if portValue <= 0 || portValue > 65535 {
+		return "", fmt.Errorf("metrics live server port out of range: %d", portValue)
+	}
+	return fmt.Sprintf("ws://%s:%d", host, portValue), nil
+}
+
+func stringValue(values map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value, ok := values[key]; ok {
+			switch typed := value.(type) {
+			case string:
+				return strings.TrimSpace(typed)
+			case fmt.Stringer:
+				return strings.TrimSpace(typed.String())
+			}
+		}
+	}
+	return ""
+}
+
+func intValue(values map[string]any, keys ...string) (int, bool, error) {
+	for _, key := range keys {
+		value, ok := values[key]
+		if !ok {
+			continue
+		}
+		switch typed := value.(type) {
+		case float64:
+			return int(typed), true, nil
+		case int:
+			return typed, true, nil
+		case string:
+			parsed, err := strconv.Atoi(strings.TrimSpace(typed))
+			if err != nil {
+				return 0, true, err
+			}
+			return parsed, true, nil
+		}
+	}
+	return 0, false, nil
+}
+
 func findMetric(rows []metricRow, pathOrKey string) (metricRow, bool) {
 	for _, row := range rows {
 		if row.Path == pathOrKey || row.Key == pathOrKey {
@@ -1991,8 +2127,12 @@ func main() {
 	duration := 0 * time.Second
 	inputFile := ""
 	budgetFile := ""
+	envFile := ""
+	projectPath := ""
 	fs.StringVar(&addr, "addr", defaultAddr, "gdobs WebSocket URL")
 	fs.StringVar(&addr, "url", defaultAddr, "gdobs WebSocket URL")
+	fs.StringVar(&envFile, "env", "", "env file containing gdobs endpoint settings")
+	fs.StringVar(&projectPath, "project", "", "project directory containing .env or godot_client/.env.json")
 	fs.DurationVar(&timeout, "timeout", 10*time.Second, "timeout for machine-readable commands")
 	fs.DurationVar(&duration, "duration", 0, "capture/stream duration")
 	fs.StringVar(&waitFor, "for", "snapshot", "wait target: snapshot, log, event, trace")
@@ -2015,6 +2155,17 @@ func main() {
 	if err := fs.Parse(args); err != nil {
 		log.Fatal(err)
 	}
+	addrExplicit := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "addr" || f.Name == "url" {
+			addrExplicit = true
+		}
+	})
+	resolvedAddr, err := resolveAddr(addr, envFile, projectPath, addrExplicit)
+	if err != nil {
+		log.Fatal(err)
+	}
+	addr = resolvedAddr
 	switch mode {
 	case "version":
 		fmt.Printf("gdobs %s (%s, %s)\n", version, commit, date)

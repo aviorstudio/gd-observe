@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -109,5 +111,54 @@ func TestTagCardinality(t *testing.T) {
 func TestIsCommandIncludesVersion(t *testing.T) {
 	if !isCommand("version") {
 		t.Fatal("expected version to be a command")
+	}
+}
+
+func TestAddrFromJSONEnvFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env.json")
+	if err := os.WriteFile(path, []byte(`{"metrics_live_server_host":"127.0.0.1","metrics_live_server_port":8766}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := addrFromEnvFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "ws://127.0.0.1:8766" {
+		t.Fatalf("expected env-derived addr, got %s", got)
+	}
+}
+
+func TestAddrFromDotEnvFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+	if err := os.WriteFile(path, []byte("GDOBS_HOST=localhost\nGDOBS_PORT=8770\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := addrFromEnvFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "ws://localhost:8770" {
+		t.Fatalf("expected dotenv-derived addr, got %s", got)
+	}
+}
+
+func TestAddrFromProjectPrefersGodotClientEnv(t *testing.T) {
+	dir := t.TempDir()
+	clientDir := filepath.Join(dir, "godot_client")
+	if err := os.Mkdir(clientDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(clientDir, ".env.json")
+	if err := os.WriteFile(path, []byte(`{"metrics_live_server_port":8767}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := addrFromProject(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "ws://127.0.0.1:8767" {
+		t.Fatalf("expected project-derived addr, got %s", got)
 	}
 }
