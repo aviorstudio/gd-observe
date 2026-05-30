@@ -480,7 +480,7 @@ func (m model) renderHeader() string {
 	if m.connected {
 		state = okStyle.Render(m.status)
 	}
-	return titleStyle.Render("gd-observe") + " " + statusStyle.Render(m.layoutMode()) + " " + statusStyle.Render(m.addr) + " " + state
+	return titleStyle.Render("gdobs") + " " + statusStyle.Render(m.layoutMode()) + " " + statusStyle.Render(m.addr) + " " + state
 }
 
 func (m model) renderOverview() string {
@@ -1970,7 +1970,7 @@ func main() {
 		mode = args[0]
 		args = args[1:]
 	}
-	fs := flag.NewFlagSet("gd-observe", flag.ExitOnError)
+	fs := flag.NewFlagSet("gdobs", flag.ExitOnError)
 	addr := defaultAddr
 	timeout := 10 * time.Second
 	waitFor := "snapshot"
@@ -1991,8 +1991,8 @@ func main() {
 	duration := 0 * time.Second
 	inputFile := ""
 	budgetFile := ""
-	fs.StringVar(&addr, "addr", defaultAddr, "gd-observe WebSocket URL")
-	fs.StringVar(&addr, "url", defaultAddr, "gd-observe WebSocket URL")
+	fs.StringVar(&addr, "addr", defaultAddr, "gdobs WebSocket URL")
+	fs.StringVar(&addr, "url", defaultAddr, "gdobs WebSocket URL")
 	fs.DurationVar(&timeout, "timeout", 10*time.Second, "timeout for machine-readable commands")
 	fs.DurationVar(&duration, "duration", 0, "capture/stream duration")
 	fs.StringVar(&waitFor, "for", "snapshot", "wait target: snapshot, log, event, trace")
@@ -2017,7 +2017,7 @@ func main() {
 	}
 	switch mode {
 	case "version":
-		fmt.Printf("gd-observe %s (%s, %s)\n", version, commit, date)
+		fmt.Printf("gdobs %s (%s, %s)\n", version, commit, date)
 		return
 	case "snapshot":
 		options := snapshotOptions(kind, path, pathPrefix, sortBy, limit, includeRaw, includeTraces)

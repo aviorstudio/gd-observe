@@ -44,4 +44,4 @@ jobs:
       - name: Build CLI
         if: ${{ hashFiles('cli/go.mod') != '' }}
         working-directory: cli
-        run: go build -o /tmp/gd-observe .
+        run: go build -o /tmp/gdobs .

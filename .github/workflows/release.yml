@@ -134,16 +134,16 @@ jobs:
             name="gd-observe_${os_label}_${arch_label}"
             out_dir="dist/$name"
             mkdir -p "$out_dir"
-            out_path="$PWD/$out_dir/gd-observe$exe"
+            out_path="$PWD/$out_dir/gdobs$exe"
             (cd cli && GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build -trimpath \
               -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" \
               -o "$out_path" .)
             cp README.md "$out_dir/README.md"
 
             if [ "$archive_ext" = "zip" ]; then
-              (cd "$out_dir" && zip -q "../$name.zip" "gd-observe$exe" README.md)
+              (cd "$out_dir" && zip -q "../$name.zip" "gdobs$exe" README.md)
             else
-              tar -C "$out_dir" -czf "dist/$name.tar.gz" "gd-observe$exe" README.md
+              tar -C "$out_dir" -czf "dist/$name.tar.gz" "gdobs$exe" README.md
             fi
           }
 

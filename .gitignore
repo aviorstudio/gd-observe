@@ -1,4 +1,4 @@
 .DS_Store
 dist/
-cli/gd-observe
+cli/gdobs
 cli/bin/
