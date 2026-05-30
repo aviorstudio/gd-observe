@@ -131,7 +131,7 @@ jobs:
               exe=".exe"
             fi
 
-            name="gd-observe_${os_label}_${arch_label}"
+            name="gdobs_${os_label}_${arch_label}"
             out_dir="dist/$name"
             mkdir -p "$out_dir"
             out_path="$PWD/$out_dir/gdobs$exe"
