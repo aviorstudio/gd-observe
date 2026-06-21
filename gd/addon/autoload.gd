@@ -11,6 +11,12 @@ var _runtime_sampler: RefCounted = MetricsRuntimeSamplerScript.new()
 func configure(config: RefCounted) -> void:
 	_collector.configure(config)
 
+func configure_from_resource(config: Resource) -> void:
+	if config != null and config.has_method("to_metrics_config"):
+		configure(config.call("to_metrics_config"))
+	else:
+		configure(null)
+
 func is_enabled() -> bool:
 	return _collector.is_enabled()
 
@@ -103,6 +109,11 @@ func start_live_server(config: RefCounted = null) -> Error:
 	_live_server = MetricsLiveServerScript.new()
 	add_child(_live_server)
 	return _live_server.start_server(_collector, config, _runtime_sampler)
+
+func start_live_server_from_resource(config: Resource, overrides: Dictionary = {}) -> Error:
+	if config != null and config.has_method("to_live_server_config"):
+		return start_live_server(config.call("to_live_server_config", overrides))
+	return start_live_server(null)
 
 func stop_live_server() -> void:
 	if _live_server != null and is_instance_valid(_live_server):

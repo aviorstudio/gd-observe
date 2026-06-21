@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ObserveLiveServerConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/@aviorstudio_gd-observe/src/observe_live_server_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enabled = false
+host = "127.0.0.1"
+port = 8765
+snapshot_interval_msec = 250
+include_raw_samples = false
+include_runtime_stats = true
+include_frame_traces = false
+max_snapshot_bytes = 900000

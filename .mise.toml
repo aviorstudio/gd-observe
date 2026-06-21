@@ -1,2 +1,5 @@
 [tools]
 go = "1.24"
+"github:godotengine/godot" = { version = "4.4.1-stable", exe = "Godot_v4.4.1-stable_linux.x86_64", postinstall = """
+  mkdir -p $MISE_TOOL_INSTALL_PATH/bin && ln -sf ../Godot_v4.4.1-stable_linux.x86_64 $MISE_TOOL_INSTALL_PATH/bin/godot
+""" }

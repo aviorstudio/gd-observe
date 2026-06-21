@@ -97,6 +97,8 @@ jobs:
           cp gd/addon/*.uid "$package_root/" 2>/dev/null || true
           if [ -f gd/addon/autoload.gd ]; then cp gd/addon/autoload.gd "$package_root/"; fi
           if [ -d gd/addon/src ]; then cp -R gd/addon/src "$package_root/"; fi
+          if [ -d gd/addon/presets ]; then cp -R gd/addon/presets "$package_root/"; fi
+          if [ -d gd/addon/examples ]; then cp -R gd/addon/examples "$package_root/"; fi
           (cd "$package_root" && zip -r "${GITHUB_WORKSPACE}/dist/${addon_dir}.zip" .)
 
       - uses: actions/setup-go@v5
