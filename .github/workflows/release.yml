@@ -177,11 +177,11 @@ jobs:
 
       - name: Install GDAM
         if: inputs.target == 'gd'
-        uses: aviorstudio/gdam-actions/install@v0
+        uses: aviorstudio/gdam-actions/install@v0.1.2
 
       - name: Publish to GDAM
         if: inputs.target == 'gd'
-        uses: aviorstudio/gdam-actions/publish@v0
+        uses: aviorstudio/gdam-actions/publish@v0.1.2
         with:
           version: ${{ steps.release.outputs.version }}
           tag: ${{ steps.release.outputs.tag }}
