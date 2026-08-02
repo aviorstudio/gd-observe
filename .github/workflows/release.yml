@@ -28,7 +28,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -101,7 +101,7 @@ jobs:
           if [ -d gd/addon/examples ]; then cp -R gd/addon/examples "$package_root/"; fi
           (cd "$package_root" && zip -r "${GITHUB_WORKSPACE}/dist/${addon_dir}.zip" .)
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         if: inputs.target == 'cli'
         with:
           go-version-file: cli/go.mod
