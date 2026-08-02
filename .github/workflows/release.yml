@@ -27,6 +27,9 @@ concurrency: release-${{ github.repository }}-${{ inputs.target }}
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Bounded, so a step that hangs fails here rather than sitting until the
+    # runner's own timeout hours later.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
