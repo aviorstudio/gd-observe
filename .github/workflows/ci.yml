@@ -1,61 +1,45 @@
 name: CI
 
+# Every pull request and every merge to main: test, on one runner.
+#
+# There is no build. A Godot addon is GDScript in a directory -- what a release
+# ships is the same files, zipped -- so the only question is whether it is
+# correct, and that is Test's job.
+#
+# The push trigger is not redundant here: this repository has no CD, so nothing
+# else covers a merge to main.
+#
+# The steps are .github/actions/test, the same definition Release runs. There is
+# one of it, and it is the one guarding a publish to the GDAM registry.
+
 on:
   pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${ github.ref }
+  cancel-in-progress: true
+
 jobs:
-  sanity:
+  ci:
     runs-on: ubuntu-latest
+    # Bounded, so a step that hangs fails here rather than sitting until the
+    # runner's own timeout hours later.
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      # Third-party actions are pinned by SHA, with the tag in a trailing
+      # comment so the version is still readable. A tag is a moving reference:
+      # whoever can move it can run code in this job.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Validate addon package
-        run: |
-          set -euo pipefail
-          test -f gd/addon/plugin.cfg
-          test -f gd/addon/plugin.gd
-          test -f gd/addon/autoload.gd
-          test -f gd/addon/src/metrics_module.gd
-          test -f gd/addon/src/metrics_live_server.gd
-          test -f gd/addon/src/metrics_runtime_sampler.gd
-          test -f gd/addon/src/observe_config.gd
-          test -f gd/addon/src/observe_live_server_config.gd
-          test -f gd/addon/src/observe_bootstrap.gd
-          test -f gd/addon/presets/debug_observe_config.tres
-          test -f gd/addon/presets/debug_live_server_config.tres
-          test -f gd/addon/examples/app_shell/observe_example_main.tscn
-          test -f gd/addon/examples/app_shell/observe_example_main.gd
-
-      - name: Install Godot
-        if: ${{ hashFiles('gd/tests/test.sh') != '' }}
-        run: |
-          set -euo pipefail
-          curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
-          unzip -q /tmp/godot.zip -d /tmp/godot
-          sudo install -m 0755 /tmp/godot/Godot_v4.4.1-stable_linux.x86_64 /usr/local/bin/godot
-
-      - name: Run Godot tests
-        if: ${{ hashFiles('gd/tests/test.sh') != '' }}
-        run: ./gd/tests/test.sh
-
-      - uses: actions/setup-go@v5
-        if: ${{ hashFiles('cli/go.mod') != '' }}
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: cli/go.mod
-          cache-dependency-path: cli/go.sum
 
-      - name: Run Go tests
-        if: ${{ hashFiles('cli/go.mod') != '' }}
-        working-directory: cli
-        run: go test ./...
-
-      - name: Build CLI
-        if: ${{ hashFiles('cli/go.mod') != '' }}
-        working-directory: cli
-        run: go build -o /tmp/gdobs .
+      - name: Test
+        uses: ./.github/actions/test
