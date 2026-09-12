@@ -49,7 +49,13 @@ func _test_live_server_config_converts_to_runtime_config(failures: Array[String]
 	resource.include_runtime_stats = false
 	resource.include_frame_traces = true
 	resource.max_snapshot_bytes = 123456
-	var config: MetricsLiveServer.MetricsLiveServerConfig = resource.to_live_server_config({"port": 7777})
+	resource.max_client_buffer_bytes = 1048576
+	resource.allow_non_loopback = true
+	resource.auth_timeout_msec = 5000
+	resource.allowed_tag_keys = PackedStringArray(["route"])
+	resource.allowed_field_keys = PackedStringArray(["count"])
+	var overrides := {"port": 7777, "auth_token": "runtime-only-test-token"}
+	var config: MetricsLiveServer.MetricsLiveServerConfig = resource.to_live_server_config(overrides)
 	if not config.enabled:
 		failures.append("ObserveLiveServerConfig: expected enabled=true")
 	if config.host != "127.0.0.1":
@@ -62,3 +68,9 @@ func _test_live_server_config_converts_to_runtime_config(failures: Array[String]
 		failures.append("ObserveLiveServerConfig: expected boolean flags to convert")
 	if config.max_snapshot_bytes != 123456:
 		failures.append("ObserveLiveServerConfig: expected max snapshot bytes conversion")
+	if config.max_client_buffer_bytes != 1048576 or not config.allow_non_loopback:
+		failures.append("ObserveLiveServerConfig: expected slow-client/non-loopback bounds")
+	if config.auth_token != "runtime-only-test-token" or config.auth_timeout_msec != 5000:
+		failures.append("ObserveLiveServerConfig: expected runtime auth conversion")
+	if config.allowed_tag_keys != PackedStringArray(["route"]) or config.allowed_field_keys != PackedStringArray(["count"]):
+		failures.append("ObserveLiveServerConfig: expected exact payload allowlists")

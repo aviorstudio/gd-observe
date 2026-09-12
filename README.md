@@ -106,6 +106,14 @@ func _ready() -> void:
 	GdObserve.start_live_server(MetricsLiveServer.MetricsLiveServerConfig.new(true, "127.0.0.1", 8765, 250))
 ```
 
+Runtime monitors are sampled on the snapshot cadence, not every frame. A positive cadence has a 50 ms minimum. A zero or negative cadence disables periodic sampling and broadcast; connection and explicit `snapshot_request` responses still take one fresh sample.
+
+The defaults are disabled at the bootstrap layer and loopback-only at the server layer. Non-loopback binding is rejected unless code explicitly sets `allow_non_loopback=true` and supplies a nonempty runtime token. The client must send `{"type":"auth","token":"..."}` within 5 seconds before the server sends any data. The token is not an exported Resource field and `.env.json` does not load it. The bundled CLI can read it from the process-only `GDOBS_AUTH_TOKEN` environment variable.
+
+For non-loopback clients, `allowed_tag_keys` and `allowed_field_keys` are exact game-payload allowlists; non-allowlisted tag/field entries are omitted. Empty allowlists expose no game tag/field entries. This is an explicit allowlist, **not** a generic promise to detect every possible secret. Callers remain responsible for approving both allowed keys and their values.
+
+The default total metric-series bound is 1,024 across timers, gauges, and counters. Existing identities continue updating at capacity; new identities are rejected (never evicted). Paths, tag keys, and JSON-encoded tag values are limited to 128 UTF-8 bytes and each series to 16 tags. `series_limits` exposes retained, dropped, invalid-identity, and zero eviction counters. Live peers are disconnected before another send when their outbound buffer is at least 1 MiB; `live` exposes drop and disconnect counters.
+
 Then run the terminal UI:
 
 ```sh

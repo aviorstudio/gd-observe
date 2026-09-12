@@ -11,6 +11,7 @@ func _initialize() -> void:
 	_test_tags_logs_events_and_traces(failures)
 	_test_context_spans_filters_and_runtime_checkpoints(failures)
 	_test_export_to_file(failures)
+	_test_series_bounds(failures)
 
 	if failures.is_empty():
 		print("PASS gd-observe metrics_module_test")
@@ -209,6 +210,29 @@ func _test_export_to_file(failures: Array[String]) -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(test_path))
 	if not content.contains("FileSvc.op"):
 		failures.append("export_to_file: expected JSON to contain metric path")
+
+func _test_series_bounds(failures: Array[String]) -> void:
+	var metrics := MetricsModule.new()
+	metrics.configure(MetricsModule.MetricsConfig.new(true, 5, false, false, 1000, 0, 3, 12, 1))
+	metrics.record_timer("one", 1, {"a": "x"})
+	metrics.set_gauge("two", 2)
+	metrics.increment_counter("three")
+	metrics.record_timer("four", 4)
+	metrics.record_timer("path-is-over-12-bytes", 1)
+	metrics.record_timer("tags", 1, {"a": "x", "b": "y"})
+	metrics.record_timer("one", 2, {"a": "x"})
+	var snapshot: Dictionary = metrics.export_snapshot()
+	var limits: Dictionary = snapshot.get("series_limits", {})
+	if int(limits.get("retained_series", -1)) != 3:
+		failures.append("series bounds: expected exactly 3 retained series")
+	if int(limits.get("dropped_series", 0)) != 1:
+		failures.append("series bounds: expected one capacity drop")
+	if int(limits.get("dropped_invalid_identity", 0)) != 2:
+		failures.append("series bounds: expected two invalid identity drops")
+	if int(limits.get("evicted_series", -1)) != 0:
+		failures.append("series bounds: reject-new must not evict")
+	if int(metrics.get_timer_summary("one", {"a": "x"}).get("count", 0)) != 2:
+		failures.append("series bounds: existing series must continue updating at capacity")
 
 func _find_metric(metrics: Array, path: String) -> Dictionary:
 	for metric in metrics:

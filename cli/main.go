@@ -1174,12 +1174,27 @@ func maxFloat(a, b float64) float64 {
 
 func connectCmd(addr string) tea.Cmd {
 	return func() tea.Msg {
-		conn, _, err := websocket.DefaultDialer.Dial(addr, nil)
+		conn, err := dialObserve(addr)
 		if err != nil {
 			return readMsg{err: err}
 		}
 		return connectedMsg{conn: conn}
 	}
+}
+
+func dialObserve(addr string) (*websocket.Conn, error) {
+	conn, _, err := websocket.DefaultDialer.Dial(addr, nil)
+	if err != nil {
+		return nil, err
+	}
+	token := os.Getenv("GDOBS_AUTH_TOKEN")
+	if token != "" {
+		if err := conn.WriteJSON(map[string]any{"type": "auth", "token": token}); err != nil {
+			_ = conn.Close()
+			return nil, err
+		}
+	}
+	return conn, nil
 }
 
 func reconnectLaterCmd() tea.Cmd {
@@ -1359,7 +1374,7 @@ func readSnapshot(addr string, timeout time.Duration) (snapshot, error) {
 }
 
 func readSnapshotFiltered(addr string, timeout time.Duration, options map[string]any) (snapshot, error) {
-	conn, _, err := websocket.DefaultDialer.Dial(addr, nil)
+	conn, err := dialObserve(addr)
 	if err != nil {
 		return snapshot{}, err
 	}
@@ -1513,7 +1528,7 @@ func runCapture(addr string, timeout time.Duration, duration time.Duration, outD
 }
 
 func captureStream(addr string, duration time.Duration, outPath string) error {
-	conn, _, err := websocket.DefaultDialer.Dial(addr, nil)
+	conn, err := dialObserve(addr)
 	if err != nil {
 		return err
 	}
@@ -1539,7 +1554,7 @@ func captureStream(addr string, duration time.Duration, outPath string) error {
 }
 
 func runStream(addr string) error {
-	conn, _, err := websocket.DefaultDialer.Dial(addr, nil)
+	conn, err := dialObserve(addr)
 	if err != nil {
 		return err
 	}
@@ -1577,7 +1592,7 @@ func statusFromSnapshot(snap snapshot) map[string]any {
 }
 
 func runWait(addr string, criteria waitCriteria, timeout time.Duration) error {
-	conn, _, err := websocket.DefaultDialer.Dial(addr, nil)
+	conn, err := dialObserve(addr)
 	if err != nil {
 		return err
 	}
