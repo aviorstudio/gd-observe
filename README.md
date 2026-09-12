@@ -251,14 +251,14 @@ Useful `GdObserve` methods include `push_context()`, `pop_context()`, `context_t
 - `gd/addon/examples/`: editor-first example scenes.
 - `gd/tests/`: Godot test project/scripts for addon behavior.
 - `cli/`: Go command-line tools for watching, capturing, asserting, and diffing live metric streams.
-- `.github/workflows/ci.yml`: runs Godot addon tests and Go CLI tests.
-- `.github/workflows/release.yml`: creates addon and CLI GitHub releases.
+- `.github/workflows/ci.yml`: runs Go and reachable Godot 4.7.2 tests, gate controls, and exact-package lifecycle checks.
+- `.github/workflows/release.yml`: reruns that common gate before creating addon or CLI GitHub releases.
 
 ## Versioning And Releases
 
 This repo has two release targets:
 
-- `gd`: uses `gd-v*` tags, verifies `gd/addon/plugin.cfg`, builds `@aviorstudio_gd-observe.zip`, and publishes `@aviorstudio/gd-observe` to GDAM.
+- `gd`: uses `gd-v*` tags, verifies `gd/addon/plugin.cfg`, and publishes the exact common-gate `@aviorstudio_gd-observe.zip` bytes to GitHub and GDAM without rebuilding.
 - `cli`: uses `cli-v*` tags, runs Go tests, builds `gdobs` binaries for Linux, macOS, and Windows, and attaches checksums.
 
 The Godot addon version lives in `gd/addon/plugin.cfg`. The release workflow is manual and must be run from `main` with a `patch`, `minor`, or `major` bump.
@@ -269,10 +269,14 @@ Run locally with:
 
 ```sh
 mise exec -- ./gd/tests/test.sh
+mise exec -- ./gd/tests/test_runner_controls.sh
 cd cli && mise exec -- go test ./...
+./scripts/build-addon-package.sh
+mise exec -- ./scripts/verify-package.sh
+mise exec -- ./scripts/verify-editor-lifecycle.sh
 ```
 
-CI runs both test suites.
+**Correction ([fieldsofrevik#147](https://github.com/aviorstudio/fieldsofrevik/issues/147)):** the prior claim that CI ran both suites was false: the common action only ran Go. CI and `gd` release now run the Go suite, reachable Godot 4.7.2 suite, negative/restored runner controls, closed package verification, and the packaged editor lifecycle. Headless editor-script shutdown emits a narrowly allowlisted Godot 4.7.2 RID/resource cleanup diagnostic; all other `ERROR:`, `SCRIPT ERROR:`, and `FAIL:` lines fail the lifecycle gate.
 
 ## License
 

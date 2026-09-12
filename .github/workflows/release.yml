@@ -7,34 +7,47 @@ on:
         description: Release target
         required: true
         type: choice
-        options:
-          - gd
-          - cli
+        options: [gd, cli]
       bump:
         description: Version bump
         required: true
         type: choice
-        options:
-          - patch
-          - minor
-          - major
-
-permissions:
-  contents: write
+        options: [patch, minor, major]
 
 concurrency: release-${{ github.repository }}-${{ inputs.target }}
 
 jobs:
-  release:
+  test:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
-    # Bounded, so a step that hangs fails here rather than sitting until the
-    # runner's own timeout hours later.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Test exact release commit
+        uses: ./.github/actions/test
+      - name: Upload tested addon package
+        if: inputs.target == 'gd'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gd-observe-addon-${{ github.sha }}
+          path: dist/@aviorstudio_gd-observe.zip
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: test
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-
       - name: Determine release version
         id: release
         env:
@@ -42,79 +55,38 @@ jobs:
           BUMP: ${{ inputs.bump }}
         run: |
           set -euo pipefail
-          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
-            echo 'Run releases from the main branch.' >&2
-            exit 1
-          fi
-          case "$TARGET" in
-            gd) prefix="gd-v" ;;
-            cli) prefix="cli-v" ;;
-            *) echo "Unsupported release target: $TARGET" >&2; exit 1 ;;
-          esac
+          test "$GITHUB_REF" = refs/heads/main || { echo 'Run releases from main.' >&2; exit 1; }
+          case "$TARGET" in gd) prefix=gd-v ;; cli) prefix=cli-v ;; *) exit 1 ;; esac
           git fetch --tags --force
           latest="$(git tag --list "${prefix}[0-9]*" | sed -E "s/^${prefix}//" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
-          if [ -z "$latest" ]; then
-            latest="$(git tag --list 'v[0-9]*' | sed -E 's/^v//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
-          fi
-          if [ -z "$latest" ]; then
-            version="0.0.1"
-          else
-            IFS=. read -r major minor patch <<< "$latest"
-            case "$BUMP" in
-              major) major=$((major + 1)); minor=0; patch=0 ;;
-              minor) minor=$((minor + 1)); patch=0 ;;
-              patch) patch=$((patch + 1)) ;;
-              *) echo "Unsupported bump: $BUMP" >&2; exit 1 ;;
-            esac
-            version="${major}.${minor}.${patch}"
-          fi
-          tag="${prefix}${version}"
-          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "Tag already exists: $tag" >&2
-            exit 1
-          fi
-          if [ "$TARGET" = "gd" ]; then
+          test -n "$latest" || latest=0.0.0
+          IFS=. read -r major minor patch <<< "$latest"
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+            *) exit 1 ;;
+          esac
+          version="$major.$minor.$patch"
+          tag="$prefix$version"
+          ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null
+          if [ "$TARGET" = gd ]; then
             plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' gd/addon/plugin.cfg | head -n 1)"
-            if [ "$plugin_version" != "$version" ]; then
-              echo "gd/addon/plugin.cfg version is $plugin_version, but the next $BUMP release is $version." >&2
-              echo "Update gd/addon/plugin.cfg to version=\"$version\", commit it, then rerun this workflow." >&2
-              exit 1
-            fi
+            test "$plugin_version" = "$version" || { echo "plugin.cfg=$plugin_version next=$version" >&2; exit 1; }
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-
-      - name: Package addon
+      - name: Download exact tested addon package
         if: inputs.target == 'gd'
-        run: |
-          set -euo pipefail
-          test -f gd/addon/plugin.cfg
-          rm -rf dist
-          mkdir -p dist
-          repo_owner="${GITHUB_REPOSITORY%%/*}"
-          addon_dir="@${repo_owner}_${GITHUB_REPOSITORY#*/}"
-          package_root="${RUNNER_TEMP}/addon-package/${addon_dir}"
-          rm -rf "${RUNNER_TEMP}/addon-package"
-          mkdir -p "$package_root"
-          cp gd/addon/plugin.cfg gd/addon/plugin.gd "$package_root/"
-          cp gd/addon/*.uid "$package_root/" 2>/dev/null || true
-          if [ -f gd/addon/autoload.gd ]; then cp gd/addon/autoload.gd "$package_root/"; fi
-          if [ -d gd/addon/src ]; then cp -R gd/addon/src "$package_root/"; fi
-          if [ -d gd/addon/presets ]; then cp -R gd/addon/presets "$package_root/"; fi
-          if [ -d gd/addon/examples ]; then cp -R gd/addon/examples "$package_root/"; fi
-          (cd "$package_root" && zip -r "${GITHUB_WORKSPACE}/dist/${addon_dir}.zip" .)
-
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: gd-observe-addon-${{ github.sha }}
+          path: dist
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         if: inputs.target == 'cli'
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
-
-      - name: Test CLI
-        if: inputs.target == 'cli'
-        working-directory: cli
-        run: go test ./...
-
       - name: Build CLI release assets
         if: inputs.target == 'cli'
         env:
@@ -124,44 +96,23 @@ jobs:
           set -euo pipefail
           DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           mkdir -p dist
-
           build() {
-            goos="$1"
-            goarch="$2"
-            os_label="$3"
-            arch_label="$4"
-            archive_ext="$5"
-            exe=""
-            if [ "$goos" = "windows" ]; then
-              exe=".exe"
-            fi
-
-            name="gdobs_${os_label}_${arch_label}"
-            out_dir="dist/$name"
-            mkdir -p "$out_dir"
+            goos="$1"; goarch="$2"; os_label="$3"; arch_label="$4"; archive_ext="$5"; exe=""
+            [ "$goos" != windows ] || exe=.exe
+            name="gdobs_${os_label}_${arch_label}"; out_dir="dist/$name"; mkdir -p "$out_dir"
             out_path="$PWD/$out_dir/gdobs$exe"
-            (cd cli && GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build -trimpath \
-              -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" \
-              -o "$out_path" .)
+            (cd cli && GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o "$out_path" .)
             cp README.md "$out_dir/README.md"
-
-            if [ "$archive_ext" = "zip" ]; then
-              (cd "$out_dir" && zip -q "../$name.zip" "gdobs$exe" README.md)
-            else
-              tar -C "$out_dir" -czf "dist/$name.tar.gz" "gdobs$exe" README.md
-            fi
+            if [ "$archive_ext" = zip ]; then (cd "$out_dir" && zip -q "../$name.zip" "gdobs$exe" README.md); else tar -C "$out_dir" -czf "dist/$name.tar.gz" "gdobs$exe" README.md; fi
           }
-
           build linux amd64 Linux x86_64 tar.gz
           build linux arm64 Linux arm64 tar.gz
           build darwin amd64 Darwin x86_64 tar.gz
           build darwin arm64 Darwin arm64 tar.gz
           build windows amd64 Windows x86_64 zip
           build windows arm64 Windows arm64 zip
-
           (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
-
-      - name: Create GitHub Release
+      - name: Create GitHub Release from tested bytes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.release.outputs.tag }}
@@ -169,23 +120,20 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           files=(dist/*.tar.gz dist/*.zip)
-          if [ -f dist/checksums.txt ]; then
-            files+=(dist/checksums.txt)
-          fi
-          if [ ${#files[@]} -eq 0 ]; then
-            echo 'No release assets were created.' >&2
-            exit 1
-          fi
-          gh release create "$TAG" "${files[@]}" --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG"
-
-      - name: Install GDAM
+          [ ! -f dist/checksums.txt ] || files+=(dist/checksums.txt)
+          [ "${#files[@]}" -gt 0 ] || { echo 'No release assets.' >&2; exit 1; }
+          sha256sum "${files[@]}"
+          gh release create "$TAG" "${files[@]}" --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG from exact tested commit $GITHUB_SHA."
+      - name: Install checksummed GDAM 0.0.8
         if: inputs.target == 'gd'
-        uses: aviorstudio/gdam-actions/install@v0.0.2
-
-      - name: Publish to GDAM
+        uses: aviorstudio/gdam-actions/install@d735444eb470194585def44521d5d91df2260e63 # v0.0.2
+        with:
+          version: v0.0.8
+      - name: Publish exact GitHub asset to GDAM
         if: inputs.target == 'gd'
-        uses: aviorstudio/gdam-actions/publish@v0.0.2
+        uses: aviorstudio/gdam-actions/publish@d735444eb470194585def44521d5d91df2260e63 # v0.0.2
         with:
           version: ${{ steps.release.outputs.version }}
           tag: ${{ steps.release.outputs.tag }}
+          asset: '@aviorstudio_gd-observe.zip'
           secret-key: ${{ secrets.GDAM_SECRET_KEY }}
