@@ -28,6 +28,12 @@ class MetricsConfig extends RefCounted:
 	var trace_slow_frame_threshold_usec: int
 	## Maximum recent frame traces included in snapshots.
 	var recent_frame_trace_count: int
+	## Maximum timer, gauge, and counter identities retained in total.
+	var max_metric_series: int
+	## UTF-8 byte bounds for metric paths and tag keys/values.
+	var max_identity_bytes: int
+	## Maximum tags participating in one metric identity.
+	var max_tags_per_series: int
 
 	func _init(
 		p_enabled: bool = true,
@@ -35,7 +41,10 @@ class MetricsConfig extends RefCounted:
 		p_trace_enabled: bool = true,
 		p_trace_continuous_enabled: bool = true,
 		p_trace_slow_frame_threshold_usec: int = 16666,
-		p_recent_frame_trace_count: int = 120
+		p_recent_frame_trace_count: int = 120,
+		p_max_metric_series: int = 1024,
+		p_max_identity_bytes: int = 128,
+		p_max_tags_per_series: int = 16
 	) -> void:
 		enabled = p_enabled
 		max_timer_samples = p_max_timer_samples
@@ -43,6 +52,9 @@ class MetricsConfig extends RefCounted:
 		trace_continuous_enabled = p_trace_continuous_enabled
 		trace_slow_frame_threshold_usec = p_trace_slow_frame_threshold_usec
 		recent_frame_trace_count = p_recent_frame_trace_count
+		max_metric_series = p_max_metric_series
+		max_identity_bytes = p_max_identity_bytes
+		max_tags_per_series = p_max_tags_per_series
 
 class MetricsSpan extends RefCounted:
 	var _metrics: MetricsModule = null
@@ -104,6 +116,8 @@ var _recent_frame_traces: Array[Dictionary] = []
 var _trigger_trace_frames_remaining: int = 0
 var _context_stack: Array[Dictionary] = []
 var _runtime_checkpoints: Dictionary[String, Dictionary] = {}
+var _dropped_series_count: int = 0
+var _dropped_invalid_identity_count: int = 0
 
 ## Applies runtime metrics configuration.
 func configure(config: MetricsConfig) -> void:
@@ -158,6 +172,8 @@ func record_timer(path: String, duration_usec: int, tags: Dictionary = {}) -> vo
 		return
 	var normalized_tags: Dictionary[String, Variant] = context_tags(tags)
 	var key: String = _metric_key(normalized_path, normalized_tags)
+	if not _accept_series(_timers, key, normalized_path, normalized_tags):
+		return
 	var timer: Dictionary = _timers.get(key, {
 		"key": key,
 		"path": normalized_path,
@@ -195,6 +211,8 @@ func set_gauge(path: String, value: float, unit: String = UNIT_VALUE, tags: Dict
 		return
 	var normalized_tags: Dictionary[String, Variant] = context_tags(tags)
 	var key: String = _metric_key(normalized_path, normalized_tags)
+	if not _accept_series(_gauges, key, normalized_path, normalized_tags):
+		return
 	var now_usec: int = Time.get_ticks_usec()
 	var gauge: Dictionary = _gauges.get(key, {
 		"key": key,
@@ -225,6 +243,8 @@ func increment_counter(path: String, amount: float = 1.0, unit: String = UNIT_CO
 		return
 	var normalized_tags: Dictionary[String, Variant] = context_tags(tags)
 	var key: String = _metric_key(normalized_path, normalized_tags)
+	if not _accept_series(_counters, key, normalized_path, normalized_tags):
+		return
 	var now_usec: int = Time.get_ticks_usec()
 	var counter: Dictionary = _counters.get(key, {
 		"key": key,
@@ -362,6 +382,13 @@ func export_snapshot_filtered(options: Dictionary = {}) -> Dictionary[String, Va
 		"summary": build_summary(metrics, options),
 		"runtime_checkpoints": _runtime_checkpoints.duplicate(true),
 		"runtime_deltas": _build_runtime_deltas(),
+		"series_limits": {
+			"max_series": maxi(_config.max_metric_series, 0),
+			"retained_series": _series_count(),
+			"dropped_series": _dropped_series_count,
+			"dropped_invalid_identity": _dropped_invalid_identity_count,
+			"evicted_series": 0,
+		},
 	}
 	if include_traces:
 		snapshot["recent_frame_traces"] = _recent_frame_traces.duplicate(true)
@@ -412,6 +439,8 @@ func reset(path: String = "", tags: Dictionary = {}) -> void:
 		_trace_spans.clear()
 		_recent_frame_traces.clear()
 		_runtime_checkpoints.clear()
+		_dropped_series_count = 0
+		_dropped_invalid_identity_count = 0
 		_trace_frame_id = -1
 		event("gd_observe.reset", {}, {"scope": "all"})
 		return
@@ -588,6 +617,29 @@ func _normalize_level(level: String) -> String:
 	if normalized in ["debug", "info", "warn", "error"]:
 		return normalized
 	return "info"
+
+func _series_count() -> int:
+	return _timers.size() + _gauges.size() + _counters.size()
+
+func _accept_series(storage: Dictionary, key: String, path: String, tags: Dictionary) -> bool:
+	if storage.has(key):
+		return true
+	var identity_limit: int = maxi(_config.max_identity_bytes, 0)
+	if identity_limit == 0 or path.to_utf8_buffer().size() > identity_limit:
+		_dropped_invalid_identity_count += 1
+		return false
+	if tags.size() > maxi(_config.max_tags_per_series, 0):
+		_dropped_invalid_identity_count += 1
+		return false
+	for tag_key in tags:
+		if str(tag_key).to_utf8_buffer().size() > identity_limit or JSON.stringify(tags[tag_key]).to_utf8_buffer().size() > identity_limit:
+			_dropped_invalid_identity_count += 1
+			return false
+	var series_limit: int = maxi(_config.max_metric_series, 0)
+	if series_limit == 0 or _series_count() >= series_limit:
+		_dropped_series_count += 1
+		return false
+	return true
 
 func _record_trace_span(path: String, duration_usec: int, tags: Dictionary[String, Variant]) -> void:
 	if not _config.trace_enabled:

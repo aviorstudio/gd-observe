@@ -1,0 +1,2 @@
+^ERROR: [0-9]+ resources? still in use at exit
+^ERROR: [0-9]+ RID allocations of type .+ were leaked at exit\.$

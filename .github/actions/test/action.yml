@@ -1,27 +1,9 @@
 name: Test
-description: >
-  Is this commit good. Nothing is packaged for release here and nothing is
-  published; a failure means the addon is wrong, not that the pipeline is.
-
-  A composite action rather than a reusable workflow so it runs in the caller's
-  job, under the caller's name -- CI / Test, Release / Test -- rather than as a
-  nested "caller / callee" check.
-
-  ONE definition, called by CI and by Release both. Release did not run any of
-  this before: it read the version, packaged the addon and published it, so the
-  only thing between a broken commit and the registry was whether somebody
-  looked at CI first.
-
-  A per-repo copy, not a shared action. `uses: ./` is repo-local, so the
-  fourteen copies of this file are copies -- the accepted cost of no repo's CI
-  breaking because another repo changed.
+description: Run Go, reachable Godot 4.7.2 gates, and the exact package install lifecycle.
 
 runs:
   using: composite
   steps:
-    # The addon's own file manifest. Listed rather than globbed: a file dropped
-    # in a refactor is exactly what this catches, and a glob would happily match
-    # whatever was left.
     - name: Validate addon package
       shell: bash
       run: |
@@ -39,6 +21,8 @@ runs:
         test -f gd/addon/presets/debug_live_server_config.tres
         test -f gd/addon/examples/app_shell/observe_example_main.tscn
         test -f gd/addon/examples/app_shell/observe_example_main.gd
+        test -f gd/package-manifest.txt
+        test -f cli/go.mod
 
     # No `if: hashFiles(...)` guard. This step used to skip itself when
     # cli/go.mod was absent, which is indistinguishable from the module being
@@ -48,3 +32,27 @@ runs:
       shell: bash
       working-directory: cli
       run: go test ./...
+
+    - name: Install checksummed Godot 4.7.2
+      shell: bash
+      run: ./scripts/install-godot.sh "$RUNNER_TEMP/gd-observe-godot"
+
+    - name: Prove Godot runner negative and restored controls
+      shell: bash
+      run: ./gd/tests/test_runner_controls.sh
+
+    - name: Godot regression tests
+      shell: bash
+      run: ./gd/tests/test.sh
+
+    - name: Build exact addon package
+      shell: bash
+      run: ./scripts/build-addon-package.sh
+
+    - name: Verify closed package manifest
+      shell: bash
+      run: ./scripts/verify-package.sh
+
+    - name: Verify packaged editor lifecycle
+      shell: bash
+      run: ./scripts/verify-editor-lifecycle.sh
