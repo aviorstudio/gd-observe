@@ -3,11 +3,10 @@ extends EditorPlugin
 
 const AUTOLOAD_NAME := "GdObserve"
 const AUTOLOAD_SCRIPT := "autoload.gd"
+const OWNED_AUTOLOAD_SETTING := "gd_observe/editor/owned_autoload_path"
 const ObserveBootstrapScript = preload("src/observe_bootstrap.gd")
 const ObserveConfigScript = preload("src/observe_config.gd")
 const ObserveLiveServerConfigScript = preload("src/observe_live_server_config.gd")
-
-var _added_autoload: bool = false
 
 func _enter_tree() -> void:
 	add_custom_type("ObserveBootstrap", "Node", ObserveBootstrapScript, _editor_icon("Signals", "Node"))
@@ -22,16 +21,24 @@ func _exit_tree() -> void:
 func _enable_plugin() -> void:
 	var key: String = "autoload/" + AUTOLOAD_NAME
 	if ProjectSettings.has_setting(key):
-		_added_autoload = false
 		return
 	var base_dir: String = str(get_script().resource_path).get_base_dir()
-	add_autoload_singleton(AUTOLOAD_NAME, base_dir.path_join(AUTOLOAD_SCRIPT))
-	_added_autoload = true
+	var autoload_path: String = base_dir.path_join(AUTOLOAD_SCRIPT)
+	add_autoload_singleton(AUTOLOAD_NAME, autoload_path)
+	ProjectSettings.set_setting(OWNED_AUTOLOAD_SETTING, autoload_path)
+	ProjectSettings.save()
 
 func _disable_plugin() -> void:
-	if _added_autoload:
+	var key: String = "autoload/" + AUTOLOAD_NAME
+	var owned_path: String = str(ProjectSettings.get_setting(OWNED_AUTOLOAD_SETTING, ""))
+	var configured_path: String = str(ProjectSettings.get_setting(key, "")).trim_prefix("*")
+	if configured_path.begins_with("uid://"):
+		configured_path = ResourceUID.get_id_path(ResourceUID.text_to_id(configured_path))
+	if not owned_path.is_empty() and configured_path == owned_path:
 		remove_autoload_singleton(AUTOLOAD_NAME)
-	_added_autoload = false
+	if ProjectSettings.has_setting(OWNED_AUTOLOAD_SETTING):
+		ProjectSettings.clear(OWNED_AUTOLOAD_SETTING)
+	ProjectSettings.save()
 
 func _editor_icon(preferred_name: String, fallback_name: String) -> Texture2D:
 	var editor_interface: EditorInterface = get_editor_interface()

@@ -2,12 +2,42 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/gorilla/websocket"
 )
+
+func TestDialObserveSendsRuntimeAuthFirst(t *testing.T) {
+	received := make(chan map[string]any, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		var message map[string]any
+		if err := conn.ReadJSON(&message); err == nil {
+			received <- message
+		}
+	}))
+	defer server.Close()
+	t.Setenv("GDOBS_AUTH_TOKEN", "test-runtime-token")
+	conn, err := dialObserve("ws" + strings.TrimPrefix(server.URL, "http"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	message := <-received
+	if message["type"] != "auth" || message["token"] != "test-runtime-token" {
+		t.Fatalf("expected first auth message, got %#v", message)
+	}
+}
 
 func TestOrderRowsByP95(t *testing.T) {
 	rows := []metricRow{

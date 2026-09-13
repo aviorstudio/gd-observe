@@ -106,6 +106,14 @@ func _ready() -> void:
 	GdObserve.start_live_server(MetricsLiveServer.MetricsLiveServerConfig.new(true, "127.0.0.1", 8765, 250))
 ```
 
+Runtime monitors are sampled on the snapshot cadence, not every frame. A positive cadence has a 50 ms minimum. A zero or negative cadence disables periodic sampling and broadcast; connection and explicit `snapshot_request` responses still take one fresh sample.
+
+The defaults are disabled at the bootstrap layer and loopback-only at the server layer. Non-loopback binding is rejected unless code explicitly sets `allow_non_loopback=true` and supplies a nonempty runtime token. The client must send `{"type":"auth","token":"..."}` within 5 seconds before the server sends any data. The token is not an exported Resource field and `.env.json` does not load it. The bundled CLI can read it from the process-only `GDOBS_AUTH_TOKEN` environment variable.
+
+For non-loopback clients, `allowed_tag_keys` and `allowed_field_keys` are exact game-payload allowlists; non-allowlisted tag/field entries are omitted. Empty allowlists expose no game tag/field entries. This is an explicit allowlist, **not** a generic promise to detect every possible secret. Callers remain responsible for approving both allowed keys and their values.
+
+The default total metric-series bound is 1,024 across timers, gauges, and counters. Existing identities continue updating at capacity; new identities are rejected (never evicted). Paths, tag keys, and JSON-encoded tag values are limited to 128 UTF-8 bytes and each series to 16 tags. `series_limits` exposes retained, dropped, invalid-identity, and zero eviction counters. Live peers are disconnected before another send when their outbound buffer is at least 1 MiB; `live` exposes drop and disconnect counters.
+
 Then run the terminal UI:
 
 ```sh
@@ -251,14 +259,14 @@ Useful `GdObserve` methods include `push_context()`, `pop_context()`, `context_t
 - `gd/addon/examples/`: editor-first example scenes.
 - `gd/tests/`: Godot test project/scripts for addon behavior.
 - `cli/`: Go command-line tools for watching, capturing, asserting, and diffing live metric streams.
-- `.github/workflows/ci.yml`: runs Godot addon tests and Go CLI tests.
-- `.github/workflows/release.yml`: creates addon and CLI GitHub releases.
+- `.github/workflows/ci.yml`: runs Go and reachable Godot 4.7.2 tests, gate controls, and exact-package lifecycle checks.
+- `.github/workflows/release.yml`: reruns that common gate before creating addon or CLI GitHub releases.
 
 ## Versioning And Releases
 
 This repo has two release targets:
 
-- `gd`: uses `gd-v*` tags, verifies `gd/addon/plugin.cfg`, builds `@aviorstudio_gd-observe.zip`, and publishes `@aviorstudio/gd-observe` to GDAM.
+- `gd`: uses `gd-v*` tags, verifies `gd/addon/plugin.cfg`, and publishes the exact common-gate `@aviorstudio_gd-observe.zip` bytes to GitHub and GDAM without rebuilding.
 - `cli`: uses `cli-v*` tags, runs Go tests, builds `gdobs` binaries for Linux, macOS, and Windows, and attaches checksums.
 
 The Godot addon version lives in `gd/addon/plugin.cfg`. The release workflow is manual and must be run from `main` with a `patch`, `minor`, or `major` bump.
@@ -269,10 +277,14 @@ Run locally with:
 
 ```sh
 mise exec -- ./gd/tests/test.sh
+mise exec -- ./gd/tests/test_runner_controls.sh
 cd cli && mise exec -- go test ./...
+./scripts/build-addon-package.sh
+mise exec -- ./scripts/verify-package.sh
+mise exec -- ./scripts/verify-editor-lifecycle.sh
 ```
 
-CI runs both test suites.
+**Correction ([fieldsofrevik#147](https://github.com/aviorstudio/fieldsofrevik/issues/147)):** the prior claim that CI ran both suites was false: the common action only ran Go. CI and `gd` release now run the Go suite, reachable Godot 4.7.2 suite, negative/restored runner controls, closed package verification, and the packaged editor lifecycle. Headless editor-script shutdown emits a narrowly allowlisted Godot 4.7.2 RID/resource cleanup diagnostic; all other `ERROR:`, `SCRIPT ERROR:`, and `FAIL:` lines fail the lifecycle gate.
 
 ## License
 

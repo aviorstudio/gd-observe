@@ -1,16 +1,7 @@
 name: CI
 
-# Every pull request and every merge to main: test, on one runner.
-#
-# There is no build. A Godot addon is GDScript in a directory -- what a release
-# ships is the same files, zipped -- so the only question is whether it is
-# correct, and that is Test's job.
-#
-# The push trigger is not redundant here: this repository has no CD, so nothing
-# else covers a merge to main.
-#
-# The steps are .github/actions/test, the same definition Release runs. There is
-# one of it, and it is the one guarding a publish to the GDAM registry.
+# CI and release call the same repository-local gate. The resulting addon ZIP
+# is the tested artifact and release downloads it without rebuilding.
 
 on:
   pull_request:
@@ -28,6 +19,8 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     # Bounded, so a step that hangs fails here rather than sitting until the
     # runner's own timeout hours later.
     timeout-minutes: 20
@@ -36,6 +29,11 @@ jobs:
       # comment so the version is still readable. A tag is a moving reference:
       # whoever can move it can run code in this job.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
 
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -43,3 +41,11 @@ jobs:
 
       - name: Test
         uses: ./.github/actions/test
+
+      - name: Upload tested addon package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gd-observe-addon-${{ env.SOURCE_SHA }}
+          path: dist/@aviorstudio_gd-observe.zip
+          if-no-files-found: error
+          retention-days: 7
