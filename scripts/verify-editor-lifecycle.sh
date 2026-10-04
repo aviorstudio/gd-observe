@@ -49,6 +49,11 @@ func _initialize() -> void:
 	call_deferred("_check")
 func _check() -> void:
 	await process_frame
+	var example = load("res://addons/@aviorstudio_gd-observe/examples/app_shell/observe_example_main.gd")
+	if example == null:
+		push_error("Packaged example must parse with or without addon autoload")
+		quit(1)
+		return
 	var configured := ProjectSettings.has_setting("autoload/GdObserve")
 	if configured != $expected:
 		push_error("restart autoload state mismatch")
