@@ -1,3 +1,5 @@
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: b3e9679886ab7a42e0a6ca6cfc3426e36a11538b3976742ba667209b5f12796c -->
+
 # gd-observe
 
 Local observability tooling for Godot 4.
@@ -250,42 +252,7 @@ Useful `GdObserve` methods include `push_context()`, `pop_context()`, `context_t
 - Logs, events, and traces are stream-oriented; connected tools keep their own history.
 - The live server is intended for local development/debug builds.
 
-## Repository Layout
-
-- `gd/addon/`: Godot plugin source packaged for GDAM and manual installation.
-- `gd/addon/plugin.cfg`: plugin name, version, description, and entry script.
-- `gd/addon/src/`: metrics, runtime sampling, live server, editor resources, bootstrap node, and autoload GDScript modules.
-- `gd/addon/presets/`: ready-to-use observe and live-server config resources.
-- `gd/addon/examples/`: editor-first example scenes.
-- `gd/tests/`: Godot test project/scripts for addon behavior.
-- `cli/`: Go command-line tools for watching, capturing, asserting, and diffing live metric streams.
-- `.github/workflows/ci.yml`: runs Go and reachable Godot 4.7.2 tests, gate controls, and exact-package lifecycle checks.
-- `.github/workflows/release.yml`: reruns that common gate before creating addon or CLI GitHub releases.
-
-## Versioning And Releases
-
-This repo has two release targets:
-
-- `gd`: uses `gd-v*` tags, verifies `gd/addon/plugin.cfg`, and publishes the exact common-gate `@aviorstudio_gd-observe.zip` bytes to GitHub and GDAM without rebuilding.
-- `cli`: uses `cli-v*` tags, runs Go tests, builds `gdobs` binaries for Linux, macOS, and Windows, and attaches checksums.
-
-The Godot addon version lives in `gd/addon/plugin.cfg`. The release workflow is manual and must be run from `main` with a `patch`, `minor`, or `major` bump.
-
-## Testing
-
-Run locally with:
-
-```sh
-mise exec -- ./gd/tests/test.sh
-mise exec -- ./gd/tests/test_runner_controls.sh
-cd cli && mise exec -- go test ./...
-./scripts/build-addon-package.sh
-mise exec -- ./scripts/verify-package.sh
-mise exec -- ./scripts/verify-editor-lifecycle.sh
-```
-
-**Correction ([fieldsofrevik#147](https://github.com/aviorstudio/fieldsofrevik/issues/147)):** the prior claim that CI ran both suites was false: the common action only ran Go. CI and `gd` release now run the Go suite, reachable Godot 4.7.2 suite, negative/restored runner controls, closed package verification, and the packaged editor lifecycle. Headless editor-script shutdown emits a narrowly allowlisted Godot 4.7.2 RID/resource cleanup diagnostic; all other `ERROR:`, `SCRIPT ERROR:`, and `FAIL:` lines fail the lifecycle gate.
 
 ## License
 
-MIT
+See `LICENSE`.
