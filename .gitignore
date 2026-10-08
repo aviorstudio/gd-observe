@@ -1,4 +1,5 @@
 .DS_Store
+.artifacts/
 dist/
 cli/gdobs
 cli/bin/

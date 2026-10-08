@@ -1,58 +1,13 @@
 name: Test
-description: Run Go, reachable Godot 4.7.2 gates, and the exact package install lifecycle.
-
+description: Verify the canonical Go, Godot, package and editor lifecycle gates.
 runs:
   using: composite
   steps:
-    - name: Validate addon package
+    - name: Install the caller-pinned Godot engine
+      uses: nicodes/tools/godot-setup@a064a1ae332bed6e13fe1f41c64dd1149bc33f4c # v0.14.0
+      with:
+        version: 4.7.2
+        binary-checksum: sha256:cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4
+    - name: Check the complete addon profile
       shell: bash
-      run: |
-        set -euo pipefail
-        test -f gd/addon/plugin.cfg
-        test -f gd/addon/plugin.gd
-        test -f gd/addon/autoload.gd
-        test -f gd/addon/src/metrics_module.gd
-        test -f gd/addon/src/metrics_live_server.gd
-        test -f gd/addon/src/metrics_runtime_sampler.gd
-        test -f gd/addon/src/observe_config.gd
-        test -f gd/addon/src/observe_live_server_config.gd
-        test -f gd/addon/src/observe_bootstrap.gd
-        test -f gd/addon/presets/debug_observe_config.tres
-        test -f gd/addon/presets/debug_live_server_config.tres
-        test -f gd/addon/examples/app_shell/observe_example_main.tscn
-        test -f gd/addon/examples/app_shell/observe_example_main.gd
-        test -f gd/package-manifest.txt
-        test -f cli/go.mod
-
-    # No `if: hashFiles(...)` guard. This step used to skip itself when
-    # cli/go.mod was absent, which is indistinguishable from the module being
-    # moved -- a skipped test is a green tick. This addon ships a Go CLI, so the
-    # step runs unconditionally.
-    - name: Go tests
-      shell: bash
-      working-directory: cli
-      run: go test ./...
-
-    - name: Install checksummed Godot 4.7.2
-      shell: bash
-      run: ./scripts/install-godot.sh "$RUNNER_TEMP/gd-observe-godot"
-
-    - name: Prove Godot runner negative and restored controls
-      shell: bash
-      run: ./gd/tests/test_runner_controls.sh
-
-    - name: Godot regression tests
-      shell: bash
-      run: ./gd/tests/test.sh
-
-    - name: Build exact addon package
-      shell: bash
-      run: ./scripts/build-addon-package.sh
-
-    - name: Verify closed package manifest
-      shell: bash
-      run: ./scripts/verify-package.sh
-
-    - name: Verify packaged editor lifecycle
-      shell: bash
-      run: ./scripts/verify-editor-lifecycle.sh
+      run: make check

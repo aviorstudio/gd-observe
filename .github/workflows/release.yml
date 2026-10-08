@@ -24,9 +24,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
         with:
-          go-version-file: cli/go.mod
+          install_args: go python http:cicd-engineering
       - name: Test exact release commit
         uses: ./.github/actions/test
       - name: Upload tested addon package
@@ -69,7 +69,10 @@ jobs:
           esac
           version="$major.$minor.$patch"
           tag="$prefix$version"
-          ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "Release tag already exists; refusing to replace it." >&2
+            exit 1
+          fi
           if [ "$TARGET" = gd ]; then
             plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' gd/addon/plugin.cfg | head -n 1)"
             test "$plugin_version" = "$version" || { echo "plugin.cfg=$plugin_version next=$version" >&2; exit 1; }
@@ -85,7 +88,7 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         if: inputs.target == 'cli'
         with:
-          go-version-file: cli/go.mod
+          go-version: '1.27.1'
           cache-dependency-path: cli/go.sum
       - name: Build CLI release assets
         if: inputs.target == 'cli'
@@ -111,7 +114,7 @@ jobs:
           build darwin arm64 Darwin arm64 tar.gz
           build windows amd64 Windows x86_64 zip
           build windows arm64 Windows arm64 zip
-          (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
+          (cd dist && sha256sum ./*.tar.gz ./*.zip > checksums.txt)
       - name: Create GitHub Release from tested bytes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
