@@ -1,4 +1,4 @@
-name: CI
+name: "Build & Test"
 
 # CI and release call the same repository-local gate. The resulting addon ZIP
 # is the tested artifact and release downloads it without rebuilding.
