@@ -1,4 +1,4 @@
 [tools]
 go = "1.27.1"
 python = "3.13.11"
-"http:cicd-engineering" = { version = "0.14.0", url = "https://github.com/nicodes/tools/releases/download/v{{ version }}/cicd-engineering-v{{ version }}.tar.gz", checksum = "sha256:69212760025baeb8ffc014135106fd6293830acb5343dcf64805aaa9a5a8e1d3" }
+"http:cicd-engineering" = { version = "0.27.1", url = "https://github.com/nicodes/tools/releases/download/v{{ version }}/cicd-engineering-v{{ version }}.tar.gz", checksum = "sha256:b227f07d191675b2383fb8ef425536383a2394f2d2be0c3faef4a751c522b8e4" }
