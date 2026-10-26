@@ -3,3 +3,7 @@
 dist/
 cli/gdobs
 cli/bin/
+
+.komizo.mise*.toml
+
+.komizo.mise*.lock

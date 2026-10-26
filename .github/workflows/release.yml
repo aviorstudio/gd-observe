@@ -1,142 +1,157 @@
 name: Release
-
-on:
+'on':
   workflow_dispatch:
     inputs:
       target:
         description: Release target
         required: true
         type: choice
-        options: [gd, cli]
+        options:
+        - gd
+        - cli
       bump:
         description: Version bump
         required: true
         type: choice
-        options: [patch, minor, major]
-
+        options:
+        - patch
+        - minor
+        - major
 concurrency: release-${{ github.repository }}-${{ inputs.target }}
-
 jobs:
   test:
-    name: "Test package"
+    name: Test package
     permissions:
       contents: read
+      attestations: read
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: "Check out source"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: "Set up tools"
-        uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
-        with:
-          install_args: go python http:cicd-engineering
-      - name: "Test"
-        uses: ./.github/actions/test
-      - name: "Upload artifacts"
-        if: inputs.target == 'gd'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: gd-observe-addon-${{ github.sha }}
-          path: dist/@aviorstudio_gd-observe.zip
-          if-no-files-found: error
-          retention-days: 1
-
+    - name: Check out source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Set up locked Komizo
+      uses: nicodes/komizo/setup@c5f5ce398dcae5c7b3f8157e8331e7fcdf0c9e03
+      env:
+        GH_TOKEN: ${{ github.token }}
+      timeout-minutes: 5
+    - name: Check project
+      uses: nicodes/komizo/run@c5f5ce398dcae5c7b3f8157e8331e7fcdf0c9e03
+      with:
+        target: check
+    - name: Upload artifacts
+      if: inputs.target == 'gd'
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: gd-observe-addon-${{ github.sha }}
+        path: dist/@aviorstudio_gd-observe.zip
+        if-no-files-found: error
+        retention-days: 1
+    env:
+      MISE_GITHUB_TOKEN: ${{ github.token }}
   release:
-    name: "Release"
+    name: Release
     needs: test
     permissions:
       contents: write
+      attestations: read
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: "Check out source"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - name: Determine release version
-        id: release
-        env:
-          TARGET: ${{ inputs.target }}
-          BUMP: ${{ inputs.bump }}
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF" = refs/heads/main || { echo 'Run releases from main.' >&2; exit 1; }
-          case "$TARGET" in gd) prefix=gd-v ;; cli) prefix=cli-v ;; *) exit 1 ;; esac
-          git fetch --tags --force
-          latest="$(git tag --list "${prefix}[0-9]*" | sed -E "s/^${prefix}//" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
-          test -n "$latest" || latest=0.0.0
-          IFS=. read -r major minor patch <<< "$latest"
-          case "$BUMP" in
-            major) major=$((major + 1)); minor=0; patch=0 ;;
-            minor) minor=$((minor + 1)); patch=0 ;;
-            patch) patch=$((patch + 1)) ;;
-            *) exit 1 ;;
-          esac
-          version="$major.$minor.$patch"
-          tag="$prefix$version"
-          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "Release tag already exists; refusing to replace it." >&2
-            exit 1
-          fi
-          if [ "$TARGET" = gd ]; then
-            plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' gd/addon/plugin.cfg | head -n 1)"
-            test "$plugin_version" = "$version" || { echo "plugin.cfg=$plugin_version next=$version" >&2; exit 1; }
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-      - name: "Download artifacts"
-        if: inputs.target == 'gd'
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: gd-observe-addon-${{ github.sha }}
-          path: dist
-      - name: "Set up Go"
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        if: inputs.target == 'cli'
-        with:
-          go-version: '1.27.1'
-          cache-dependency-path: cli/go.sum
-      - name: Build CLI release assets
-        if: inputs.target == 'cli'
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-          COMMIT: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          mkdir -p dist
-          build() {
-            goos="$1"; goarch="$2"; os_label="$3"; arch_label="$4"; archive_ext="$5"; exe=""
-            [ "$goos" != windows ] || exe=.exe
-            name="gdobs_${os_label}_${arch_label}"; out_dir="dist/$name"; mkdir -p "$out_dir"
-            out_path="$PWD/$out_dir/gdobs$exe"
-            (cd cli && GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o "$out_path" .)
-            cp README.md "$out_dir/README.md"
-            if [ "$archive_ext" = zip ]; then (cd "$out_dir" && zip -q "../$name.zip" "gdobs$exe" README.md); else tar -C "$out_dir" -czf "dist/$name.tar.gz" "gdobs$exe" README.md; fi
-          }
-          build linux amd64 Linux x86_64 tar.gz
-          build linux arm64 Linux arm64 tar.gz
-          build darwin amd64 Darwin x86_64 tar.gz
-          build darwin arm64 Darwin arm64 tar.gz
-          build windows amd64 Windows x86_64 zip
-          build windows arm64 Windows arm64 zip
-          (cd dist && sha256sum ./*.tar.gz ./*.zip > checksums.txt)
-      - name: Create GitHub Release from tested bytes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.release.outputs.tag }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          files=(dist/*.tar.gz dist/*.zip)
-          [ ! -f dist/checksums.txt ] || files+=(dist/checksums.txt)
-          [ "${#files[@]}" -gt 0 ] || { echo 'No release assets.' >&2; exit 1; }
-          sha256sum "${files[@]}"
-          gh release create "$TAG" "${files[@]}" --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG from exact tested commit $GITHUB_SHA."
-      - name: "Publish addon"
-        if: inputs.target == 'gd'
-        uses: aviorstudio/gdam-actions/publish@6677226d9353df1d410f3e7f5075e13b3b7d5308 # v0.5.1
-        with:
-          tag: ${{ steps.release.outputs.tag }}
-          asset: '@aviorstudio_gd-observe.zip'
-          api-key: ${{ secrets.GDAM_API_KEY }}
+    - name: Check out source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Determine release version
+      id: release
+      env:
+        TARGET: ${{ inputs.target }}
+        BUMP: ${{ inputs.bump }}
+      run: |
+        set -euo pipefail
+        test "$GITHUB_REF" = refs/heads/main || { echo 'Run releases from main.' >&2; exit 1; }
+        case "$TARGET" in gd) prefix=gd-v ;; cli) prefix=cli-v ;; *) exit 1 ;; esac
+        git fetch --tags --force
+        latest="$(git tag --list "${prefix}[0-9]*" | sed -E "s/^${prefix}//" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+        test -n "$latest" || latest=0.0.0
+        IFS=. read -r major minor patch <<< "$latest"
+        case "$BUMP" in
+          major) major=$((major + 1)); minor=0; patch=0 ;;
+          minor) minor=$((minor + 1)); patch=0 ;;
+          patch) patch=$((patch + 1)) ;;
+          *) exit 1 ;;
+        esac
+        version="$major.$minor.$patch"
+        tag="$prefix$version"
+        if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+          echo "Release tag already exists; refusing to replace it." >&2
+          exit 1
+        fi
+        if [ "$TARGET" = gd ]; then
+          plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' gd/addon/plugin.cfg | head -n 1)"
+          test "$plugin_version" = "$version" || { echo "plugin.cfg=$plugin_version next=$version" >&2; exit 1; }
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
+    - name: Download artifacts
+      if: inputs.target == 'gd'
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      with:
+        name: gd-observe-addon-${{ github.sha }}
+        path: dist
+    - name: Set up locked Komizo
+      uses: nicodes/komizo/setup@c5f5ce398dcae5c7b3f8157e8331e7fcdf0c9e03
+      env:
+        GH_TOKEN: ${{ github.token }}
+      timeout-minutes: 5
+      if: inputs.target == 'cli'
+    - name: Build CLI release assets
+      if: inputs.target == 'cli'
+      env:
+        VERSION: ${{ steps.release.outputs.version }}
+        COMMIT: ${{ github.sha }}
+      run: |
+        komizo exec --tools go -- bash -euo pipefail <<'KOMIZO_COMMAND'
+        set -euo pipefail
+        DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        mkdir -p dist
+        build() {
+          goos="$1"; goarch="$2"; os_label="$3"; arch_label="$4"; archive_ext="$5"; exe=""
+          [ "$goos" != windows ] || exe=.exe
+          name="gdobs_${os_label}_${arch_label}"; out_dir="dist/$name"; mkdir -p "$out_dir"
+          out_path="$PWD/$out_dir/gdobs$exe"
+          (cd cli && GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o "$out_path" .)
+          cp README.md "$out_dir/README.md"
+          if [ "$archive_ext" = zip ]; then (cd "$out_dir" && zip -q "../$name.zip" "gdobs$exe" README.md); else tar -C "$out_dir" -czf "dist/$name.tar.gz" "gdobs$exe" README.md; fi
+        }
+        build linux amd64 Linux x86_64 tar.gz
+        build linux arm64 Linux arm64 tar.gz
+        build darwin amd64 Darwin x86_64 tar.gz
+        build darwin arm64 Darwin arm64 tar.gz
+        build windows amd64 Windows x86_64 zip
+        build windows arm64 Windows arm64 zip
+        (cd dist && sha256sum ./*.tar.gz ./*.zip > checksums.txt)
+        KOMIZO_COMMAND
+    - name: Create GitHub Release from tested bytes
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ steps.release.outputs.tag }}
+      run: |
+        set -euo pipefail
+        shopt -s nullglob
+        files=(dist/*.tar.gz dist/*.zip)
+        [ ! -f dist/checksums.txt ] || files+=(dist/checksums.txt)
+        [ "${#files[@]}" -gt 0 ] || { echo 'No release assets.' >&2; exit 1; }
+        sha256sum "${files[@]}"
+        gh release create "$TAG" "${files[@]}" --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG from exact tested commit $GITHUB_SHA."
+    - name: Publish addon
+      if: inputs.target == 'gd'
+      uses: aviorstudio/gdam-actions/publish@6677226d9353df1d410f3e7f5075e13b3b7d5308
+      with:
+        tag: ${{ steps.release.outputs.tag }}
+        asset: '@aviorstudio_gd-observe.zip'
+        api-key: ${{ secrets.GDAM_API_KEY }}
+    env:
+      MISE_GITHUB_TOKEN: ${{ github.token }}
