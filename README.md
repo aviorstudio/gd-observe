@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: b3e9679886ab7a42e0a6ca6cfc3426e36a11538b3976742ba667209b5f12796c -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 30ff578204719a4b9d867937bfb606b460642e7147e9be78c2949d119199ee4e -->
 
 # gd-observe
 
@@ -256,3 +256,7 @@ Useful `GdObserve` methods include `push_context()`, `pop_context()`, `context_t
 ## License
 
 See `LICENSE`.
+
+## Repository development
+
+Install the [Komizo release](https://github.com/nicodes/komizo#install) matching `komizo.lock`, then run `komizo check`. The locked addon recipe supplies Godot and templates; the project retains its Go, package and installed-editor checks. Use `komizo run test` for the focused test suite.
