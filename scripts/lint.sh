@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-python3 scripts/engineering-bootstrap.py >/dev/null
 test -f gd/addon/plugin.cfg
 test -f gd/addon/plugin.gd
 test -f gd/addon/autoload.gd

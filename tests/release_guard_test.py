@@ -9,10 +9,11 @@ import unittest
 class ReleaseGuard(unittest.TestCase):
     def test_release_controls(self):
         lines = Path('.github/workflows/release.yml').read_text().splitlines()
-        start = next(i for i, line in enumerate(lines) if line == '      - name: Determine release version')
-        start = next(i for i in range(start, len(lines)) if lines[i] == '        run: |') + 1
-        end = next(i for i in range(start, len(lines)) if lines[i].startswith('      - '))
-        script = '\n'.join(line[10:] for line in lines[start:end])+'\n'
+        start = next(i for i, line in enumerate(lines) if line.lstrip() == '- name: Determine release version')
+        start = next(i for i in range(start, len(lines)) if lines[i].strip() == 'run: |') + 1
+        indent = len(lines[start-1])-len(lines[start-1].lstrip())
+        end = next(i for i in range(start, len(lines)) if lines[i].lstrip().startswith('- ') and len(lines[i])-len(lines[i].lstrip()) < indent)
+        script = '\n'.join(line[indent+2:] for line in lines[start:end])+'\n'
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             git = root/'git'
