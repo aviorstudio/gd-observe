@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 140374183292608eabb8ced165988013afa9332af71c798a609bb3734e92eccf -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: a244372f702fdeb10ac903e7e4fc7c6359f691f693a21cfb75a6d047e4410106 -->
 
 # gd-observe
 
@@ -17,6 +17,16 @@ Use this addon to collect gameplay timings, gauges, counters, Godot runtime stat
 Copy `gd/addon/` into `res://addons/@aviorstudio_gd-observe/` and enable the plugin.
 
 The plugin registers a `GdObserve` autoload when enabled.
+
+## Install the CLI
+
+Linux and macOS, x86_64 or arm64:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/aviorstudio/gd-observe/main/cli/install.sh | sh
+```
+
+The installer selects a published `cli-v` release, verifies the archive checksum and installs `gdobs` into `~/.local/bin`. Go is not required. Use `--version` or `--install-dir` through `sh -s --` for a specific release or destination. The addon is installed separately.
 
 ## Quick Start
 
