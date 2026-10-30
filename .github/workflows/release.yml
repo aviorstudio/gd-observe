@@ -38,7 +38,7 @@ jobs:
       timeout-minutes: 5
     - name: Check project
       shell: bash
-      run: |-
+      run: |
         set -euo pipefail
         mise run check
     - name: Upload artifacts
@@ -70,7 +70,7 @@ jobs:
       env:
         TARGET: ${{ inputs.target }}
         BUMP: ${{ inputs.bump }}
-      run: |-
+      run: |
         set -euo pipefail
         test "$GITHUB_REF" = refs/heads/main || { echo 'Run releases from main.' >&2; exit 1; }
         case "$TARGET" in gd) prefix=gd-v ;; cli) prefix=cli-v ;; *) exit 1 ;; esac
@@ -113,7 +113,7 @@ jobs:
       env:
         VERSION: ${{ steps.release.outputs.version }}
         COMMIT: ${{ github.sha }}
-      run: |-
+      run: |
         set -euo pipefail
         DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         mkdir -p dist
@@ -137,7 +137,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: ${{ steps.release.outputs.tag }}
-      run: |-
+      run: |
         set -euo pipefail
         shopt -s nullglob
         files=(dist/*.tar.gz dist/*.zip)
