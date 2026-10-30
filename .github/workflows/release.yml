@@ -153,7 +153,7 @@ jobs:
         tag: ${{ steps.release.outputs.tag }}
         asset: '@aviorstudio_gd-observe.zip'
         api-key: ${{ secrets.GDAM_API_KEY }}
-    - name: Upload accepted release artifacts
+    - name: "Upload artifacts"
       id: accepted
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
       with:
