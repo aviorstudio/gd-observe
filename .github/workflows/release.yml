@@ -31,15 +31,16 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         persist-credentials: false
-    - name: Set up locked komizo
-      uses: nicodes/komizo/setup@2ca94e2fd4bb05f41bb228e9c366e5cc733c75e6
+    - name: Set up development tools
+      uses: nicodes/tools/setup@f7e243524ce2aa29f299e4c79db33001f72f4a30
       env:
         GH_TOKEN: ${{ github.token }}
       timeout-minutes: 5
     - name: Check project
-      uses: nicodes/komizo/run@2ca94e2fd4bb05f41bb228e9c366e5cc733c75e6
-      with:
-        target: check
+      shell: bash
+      run: |-
+        set -euo pipefail
+        mise run check
     - name: Upload artifacts
       if: inputs.target == 'gd'
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
@@ -69,7 +70,7 @@ jobs:
       env:
         TARGET: ${{ inputs.target }}
         BUMP: ${{ inputs.bump }}
-      run: |
+      run: |-
         set -euo pipefail
         test "$GITHUB_REF" = refs/heads/main || { echo 'Run releases from main.' >&2; exit 1; }
         case "$TARGET" in gd) prefix=gd-v ;; cli) prefix=cli-v ;; *) exit 1 ;; esac
@@ -101,8 +102,8 @@ jobs:
       with:
         name: gd-observe-addon-${{ github.sha }}
         path: dist
-    - name: Set up locked komizo
-      uses: nicodes/komizo/setup@2ca94e2fd4bb05f41bb228e9c366e5cc733c75e6
+    - name: Set up development tools
+      uses: nicodes/tools/setup@f7e243524ce2aa29f299e4c79db33001f72f4a30
       env:
         GH_TOKEN: ${{ github.token }}
       timeout-minutes: 5
@@ -112,8 +113,7 @@ jobs:
       env:
         VERSION: ${{ steps.release.outputs.version }}
         COMMIT: ${{ github.sha }}
-      run: |
-        komizo exec --tools go -- bash -euo pipefail <<'KOMIZO_COMMAND'
+      run: |-
         set -euo pipefail
         DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         mkdir -p dist
@@ -133,12 +133,11 @@ jobs:
         build windows amd64 Windows x86_64 zip
         build windows arm64 Windows arm64 zip
         (cd dist && sha256sum ./*.tar.gz ./*.zip > checksums.txt)
-        KOMIZO_COMMAND
     - name: Create GitHub Release from tested bytes
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG: ${{ steps.release.outputs.tag }}
-      run: |
+      run: |-
         set -euo pipefail
         shopt -s nullglob
         files=(dist/*.tar.gz dist/*.zip)
@@ -178,7 +177,7 @@ jobs:
     permissions:
       contents: write
     with:
-      tools-ref: '9590742a455154ac5967a67952c5758d79d476b9'
+      tools-ref: 9590742a455154ac5967a67952c5758d79d476b9
       binary: gdobs
       tag: ${{ needs.release.outputs.tag }}
       artifact-id: ${{ needs.release.outputs.artifact-id }}
