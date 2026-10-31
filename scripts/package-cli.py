@@ -1,5 +1,6 @@
 """Package and smoke-test the native release executable."""
 import os
+from native_linkage import verify_linkage
 from pathlib import Path
 import platform
 import subprocess
@@ -27,7 +28,4 @@ else:
         bundle.add(binary, arcname=executable)
         bundle.add('README.md', arcname='README.md')
 
-if system == 'Linux':
-    assert os.environ['RUST_TARGET'].endswith('-linux-musl')
-    assert 'INTERP' not in subprocess.check_output(['readelf','-l',str(binary)],text=True)
-    assert '(NEEDED)' not in subprocess.check_output(['readelf','-d',str(binary)],text=True)
+verify_linkage(binary, system)
