@@ -1,10 +1,9 @@
 [tools]
 "python" = "3.13.11"
-"go" = "1.27.3"
+"rust" = "1.94.0"
 
 [env]
 TOOLS_ROOT = "{{ get_env(name='TOOLS_ROOT', default=config_root ~ '/.ci-tools') }}"
-GOTOOLCHAIN = "local"
 PYTHONDONTWRITEBYTECODE = "1"
 
 [tasks."install"]

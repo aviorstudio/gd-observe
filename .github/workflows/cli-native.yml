@@ -1,0 +1,83 @@
+name: Native CLI
+'on':
+  workflow_call:
+    inputs:
+      release:
+        type: boolean
+        default: false
+      version:
+        type: string
+        default: dev
+      date:
+        type: string
+        default: unknown
+permissions:
+  contents: read
+jobs:
+  native:
+    name: CLI ${{ matrix.platform }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - runner: ubuntu-24.04
+          platform: Linux
+          arch: x86_64
+          extension: tar.gz
+        - runner: ubuntu-24.04-arm
+          platform: Linux
+          arch: arm64
+          extension: tar.gz
+        - runner: macos-15-intel
+          platform: Darwin
+          arch: x86_64
+          extension: tar.gz
+        - runner: macos-15
+          platform: Darwin
+          arch: arm64
+          extension: tar.gz
+        - runner: windows-2025
+          platform: Windows
+          arch: x86_64
+          extension: zip
+        - runner: windows-11-arm
+          platform: Windows
+          arch: arm64
+          extension: zip
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ inputs.version }}
+      COMMIT: ${{ github.sha }}
+      DATE: ${{ inputs.date }}
+      CARGO_INCREMENTAL: '0'
+    steps:
+    - name: Check out source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Install pinned Rust
+      run: rustup toolchain install 1.94.0 --profile minimal
+    - name: Test native CLI
+      run: cargo +1.94.0 test --locked --manifest-path cli/Cargo.toml
+    - name: Build release archive
+      if: inputs.release
+      env:
+        RELEASE_PLATFORM: ${{ matrix.platform }}
+        RELEASE_ARCH: ${{ matrix.arch }}
+        RELEASE_EXTENSION: ${{ matrix.extension }}
+      run: |
+        set -euo pipefail
+        cargo +1.94.0 build --release --locked --manifest-path cli/Cargo.toml
+        python3 scripts/package-cli.py
+    - name: Upload native archive
+      if: inputs.release
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: native-cli-${{ matrix.platform }}-${{ matrix.arch }}
+        path: dist/gdobs_${{ matrix.platform }}_${{ matrix.arch }}.${{ matrix.extension }}
+        if-no-files-found: error
+        retention-days: 7

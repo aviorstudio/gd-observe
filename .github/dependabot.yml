@@ -93,7 +93,7 @@ updates:
   open-pull-requests-limit: 5
   cooldown:
     default-days: 3
-- package-ecosystem: gomod
+- package-ecosystem: cargo
   directories:
   - /cli
   schedule:
