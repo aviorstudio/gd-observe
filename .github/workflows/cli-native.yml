@@ -23,26 +23,32 @@ jobs:
       matrix:
         include:
         - runner: ubuntu-24.04
+          rust-target: x86_64-unknown-linux-musl
           platform: Linux
           arch: x86_64
           extension: tar.gz
         - runner: ubuntu-24.04-arm
+          rust-target: aarch64-unknown-linux-musl
           platform: Linux
           arch: arm64
           extension: tar.gz
         - runner: macos-15-intel
+          rust-target: x86_64-apple-darwin
           platform: Darwin
           arch: x86_64
           extension: tar.gz
         - runner: macos-15
+          rust-target: aarch64-apple-darwin
           platform: Darwin
           arch: arm64
           extension: tar.gz
         - runner: windows-2025
+          rust-target: x86_64-pc-windows-msvc
           platform: Windows
           arch: x86_64
           extension: zip
         - runner: windows-11-arm
+          rust-target: aarch64-pc-windows-msvc
           platform: Windows
           arch: arm64
           extension: zip
@@ -54,15 +60,27 @@ jobs:
       COMMIT: ${{ github.sha }}
       DATE: ${{ inputs.date }}
       CARGO_INCREMENTAL: '0'
+      RUST_TARGET: ${{ matrix.rust-target }}
+      CC_x86_64_unknown_linux_musl: musl-gcc
+      CC_aarch64_unknown_linux_musl: musl-gcc
     steps:
     - name: Check out source
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         persist-credentials: false
     - name: Install pinned Rust
-      run: rustup toolchain install 1.94.0 --profile minimal
+      run: rustup toolchain install 1.94.0 --profile minimal --target "$RUST_TARGET"
+    - name: Link Windows C runtime statically
+      if: runner.os == 'Windows'
+      run: echo 'RUSTFLAGS=-C target-feature=+crt-static' >> "$GITHUB_ENV"
+    - name: Install native musl linker
+      if: runner.os == 'Linux'
+      run: |
+        set -euo pipefail
+        sudo apt-get update -qq
+        sudo apt-get install -y musl-tools
     - name: Test native CLI
-      run: cargo +1.94.0 test --locked --manifest-path cli/Cargo.toml
+      run: cargo +1.94.0 test --locked --target "$RUST_TARGET" --manifest-path cli/Cargo.toml
     - name: Build release archive
       if: inputs.release
       env:
@@ -71,7 +89,7 @@ jobs:
         RELEASE_EXTENSION: ${{ matrix.extension }}
       run: |
         set -euo pipefail
-        cargo +1.94.0 build --release --locked --manifest-path cli/Cargo.toml
+        cargo +1.94.0 build --release --locked --target "$RUST_TARGET" --manifest-path cli/Cargo.toml
         python3 scripts/package-cli.py
     - name: Upload native archive
       if: inputs.release

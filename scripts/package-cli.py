@@ -1,5 +1,6 @@
 """Package and smoke-test the native release executable."""
 import os
+from native_linkage import verify_linkage
 from pathlib import Path
 import platform
 import subprocess
@@ -13,7 +14,7 @@ actual_arch = platform.machine().lower()
 assert actual_arch in ({'x86_64', 'amd64'} if arch == 'x86_64' else {'arm64', 'aarch64'}), actual_arch
 assert extension == ('zip' if system == 'Windows' else 'tar.gz')
 executable = 'gdobs.exe' if system == 'Windows' else 'gdobs'
-binary = Path('cli/target/release')/executable
+binary = Path('cli/target')/os.environ['RUST_TARGET']/'release'/executable
 identity = f"gdobs {os.environ['VERSION']} ({os.environ['COMMIT']}, {os.environ['DATE']})"
 assert subprocess.check_output([str(binary), 'version'], text=True).strip() == identity
 Path('dist').mkdir(exist_ok=True)
@@ -26,3 +27,5 @@ else:
     with tarfile.open(archive, 'w:gz') as bundle:
         bundle.add(binary, arcname=executable)
         bundle.add('README.md', arcname='README.md')
+
+verify_linkage(binary, system)
