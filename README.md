@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 8f41f0b68c3bd7d338db53a17bb79ccfdf68f48abf2d94fe2adb2a19ece84c1b -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: a2b333eba44f74fb726d6bbbaca17ea093c3825903d634c55153a9fee35b0d98 -->
 
 # gd-observe
 
@@ -26,7 +26,7 @@ Linux and macOS, x86_64 or arm64:
 curl -fsSL https://raw.githubusercontent.com/aviorstudio/gd-observe/main/cli/install.sh | sh
 ```
 
-The installer selects a published `cli-v` release, verifies the archive checksum and installs `gdobs` into `~/.local/bin`. Go is not required. Use `--version` or `--install-dir` through `sh -s --` for a specific release or destination. The addon is installed separately.
+The installer selects a published `cli-v` release, verifies the archive checksum and installs `gdobs` into `~/.local/bin`. Rust is not required to run the release binary. Use `--version` or `--install-dir` through `sh -s --` for a specific release or destination. The addon is installed separately.
 
 ## Quick Start
 
@@ -129,28 +129,27 @@ The default total metric-series bound is 1,024 across timers, gauges, and counte
 Then run the terminal UI:
 
 ```sh
-cd cli
-go run . watch --addr ws://127.0.0.1:8765
+gdobs watch --addr ws://127.0.0.1:8765
 ```
 
-The TUI is mouse-first. Use the top tabs for `Dashboard`, `Logs`, `Events`, and `Traces`; click rows in stream tabs to inspect structured details; use mouse wheel or trackpad scrolling for long views. `ctrl+c` exits the terminal program.
+The Rust/Ratatui TUI is mouse-first. Use the top tabs for `Dashboard`, `Logs`, `Events`, and `Traces`; click rows in stream tabs to inspect structured details; use mouse wheel or trackpad scrolling for long views. `ctrl+c` exits the terminal program. Keyboard navigation is also available: `Tab` or `1`–`4` switches tabs, arrow keys select rows, and `PageUp` / `PageDown` moves through longer lists.
 
 Machine-readable modes:
 
 ```sh
-cli/bin/gdobs snapshot --url ws://127.0.0.1:8765
-cli/bin/gdobs snapshot --env godot_client/.env.json
-cli/bin/gdobs status --project .
-cli/bin/gdobs snapshot --kind timer --path-prefix CardPresentation --sort p95 --limit 20
-cli/bin/gdobs stream --url ws://127.0.0.1:8765
-cli/bin/gdobs status --url ws://127.0.0.1:8765
-cli/bin/gdobs wait --for event --name match.route_loaded --timeout 10s
-cli/bin/gdobs assert --metric BoardVisualService.hex_screen_resolve --max-p95-usec 16666
-cli/bin/gdobs assert --budget metrics-budget.json
-cli/bin/gdobs diagnose --url ws://127.0.0.1:8765
-cli/bin/gdobs capture --duration 30s --out artifacts/run-001
-cli/bin/gdobs top timers --file artifacts/run-001/snapshot.json --sort p95 --limit 20
-cli/bin/gdobs diff before.json after.json
+gdobs snapshot --url ws://127.0.0.1:8765
+gdobs snapshot --env godot_client/.env.json
+gdobs status --project .
+gdobs snapshot --kind timer --path-prefix CardPresentation --sort p95 --limit 20
+gdobs stream --url ws://127.0.0.1:8765
+gdobs status --url ws://127.0.0.1:8765
+gdobs wait --for event --name match.route_loaded --timeout 10s
+gdobs assert --metric BoardVisualService.hex_screen_resolve --max-p95-usec 16666
+gdobs assert --budget metrics-budget.json
+gdobs diagnose --url ws://127.0.0.1:8765
+gdobs capture --duration 30s --out artifacts/run-001
+gdobs top timers --file artifacts/run-001/snapshot.json --sort p95 --limit 20
+gdobs diff before.json after.json
 ```
 
 Endpoint resolution order is explicit URL first, then project/env discovery, then `ws://127.0.0.1:8765`. Use `--env path/to/.env.json` or `--project path/to/repo` when running multiple games locally. Supported env keys are `gdobs_url`, or `gdobs_port` with optional `gdobs_host`; `.env` files may also use `GDOBS_URL`, or `GDOBS_PORT` with optional `GDOBS_HOST`. If host is omitted, `gdobs` uses `127.0.0.1`.
@@ -251,7 +250,7 @@ The response is a `snapshot` with the same `request_id`.
 - `MetricsModule`: RefCounted collector for tests or custom wrappers.
 - `MetricsRuntimeSampler`: Godot `Performance` monitor sampler.
 - `MetricsLiveServer`: localhost WebSocket snapshot server.
-- `cli/`: Go Bubble Tea terminal UI.
+- `cli/`: Rust CLI and Ratatui terminal UI.
 
 Useful `GdObserve` methods include `push_context()`, `pop_context()`, `context_tags()`, `begin_span()`, `checkpoint_runtime()`, `export_snapshot_filtered()`, and `diagnose_metrics()`.
 
@@ -277,5 +276,7 @@ git -C .ci-tools checkout --detach f7e243524ce2aa29f299e4c79db33001f72f4a30
 mise install
 mise run check
 ```
+
+`mise.toml` pins Rust 1.94.0 and owns tool versions and tasks. For a source-only CLI build, run `cargo build --release --locked --manifest-path cli/Cargo.toml`; the executable is `cli/target/release/gdobs` (`gdobs.exe` on Windows).
 
 `mise.toml` owns tool versions and tasks. Engine and template downloads are checksum verified. `mise run build` packages the addon; `mise run test` runs its declared tests. The complete check also validates the installed artifact. Build and test receipts stay in `.artifacts/verification`.

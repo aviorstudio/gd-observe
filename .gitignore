@@ -4,3 +4,5 @@ dist/
 cli/gdobs
 cli/bin/
 /.ci-tools/
+
+cli/target/
