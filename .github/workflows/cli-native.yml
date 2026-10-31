@@ -81,6 +81,9 @@ jobs:
         sudo apt-get install -y musl-tools
     - name: Test native CLI
       run: cargo +1.94.0 test --locked --target "$RUST_TARGET" --manifest-path cli/Cargo.toml
+    - name: Verify WSS system trust roots
+      if: runner.os == 'Linux'
+      run: TLS_TEST_BINARY="cli/target/$RUST_TARGET/debug/gdobs" python3 tests/tls_test.py
     - name: Build release archive
       if: inputs.release
       env:

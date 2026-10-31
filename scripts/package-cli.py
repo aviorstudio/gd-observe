@@ -19,13 +19,16 @@ identity = f"gdobs {os.environ['VERSION']} ({os.environ['COMMIT']}, {os.environ[
 assert subprocess.check_output([str(binary), 'version'], text=True).strip() == identity
 Path('dist').mkdir(exist_ok=True)
 archive = Path('dist')/f'gdobs_{system}_{arch}.{extension}'
+license = Path('LICENSE')
 if extension == 'zip':
     with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as bundle:
         bundle.write(binary, executable)
         bundle.write('README.md', 'README.md')
+        bundle.write(license, 'LICENSE')
 else:
     with tarfile.open(archive, 'w:gz') as bundle:
         bundle.add(binary, arcname=executable)
         bundle.add('README.md', arcname='README.md')
+        bundle.add(license, arcname='LICENSE')
 
 verify_linkage(binary, system)
