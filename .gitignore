@@ -6,3 +6,5 @@ cli/bin/
 /.ci-tools/
 
 cli/target/
+
+__pycache__/
