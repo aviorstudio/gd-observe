@@ -32,7 +32,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Set up development tools
-      uses: nicodes/tools/setup@f7e243524ce2aa29f299e4c79db33001f72f4a30
+      uses: nicodes/tools/setup@f412061a7a3f0914db9e09d1159e69504aee8706
       env:
         GH_TOKEN: ${{ github.token }}
       timeout-minutes: 5
@@ -179,11 +179,11 @@ jobs:
   publish-cli:
     name: Publish release
     needs: [release, accept-cli]
-    uses: nicodes/tools/.github/workflows/cli-publish.yml@9590742a455154ac5967a67952c5758d79d476b9
+    uses: nicodes/tools/.github/workflows/cli-publish.yml@f412061a7a3f0914db9e09d1159e69504aee8706
     permissions:
       contents: write
     with:
-      tools-ref: 9590742a455154ac5967a67952c5758d79d476b9
+      tools-ref: f412061a7a3f0914db9e09d1159e69504aee8706
       binary: gdobs
       tag: ${{ needs.release.outputs.tag }}
       artifact-id: ${{ needs.accept-cli.outputs.artifact-id }}
