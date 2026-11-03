@@ -144,6 +144,8 @@ jobs:
     if: inputs.target == 'cli'
     permissions:
       contents: read
+      attestations: write
+      id-token: write
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -166,6 +168,10 @@ jobs:
         done
         test "$(find . -maxdepth 1 -type f | wc -l)" -eq 6
         sha256sum ./*.tar.gz ./*.zip > checksums.txt
+    - name: Attest accepted native archives
+      uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+      with:
+        subject-path: dist/*
     - name: Upload accepted archives
       id: accepted
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
