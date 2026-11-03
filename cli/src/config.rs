@@ -11,6 +11,7 @@ pub const COMMANDS: &[&str] = &[
 #[derive(Clone, Debug)]
 pub struct Config {
     pub command: String,
+    pub json: bool,
     pub addr: String,
     pub timeout: Duration,
     pub duration: Duration,
@@ -38,6 +39,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             command: "watch".into(),
+            json: false,
             addr: DEFAULT_ADDR.into(),
             timeout: Duration::from_secs(10),
             duration: Duration::ZERO,
@@ -63,7 +65,7 @@ impl Default for Config {
     }
 }
 
-pub const HELP: &str = "gdobs: Godot observability CLI and Ratatui dashboard\n\nUsage: gdobs [watch|snapshot|capture|stream|status|wait|assert|diagnose|top|diff|version] [options]\n\n  --addr, --url URL       WebSocket endpoint (default ws://127.0.0.1:8765)\n  --env FILE             Endpoint settings from .env or .env.json\n  --project DIRECTORY    Discover endpoint settings in a Godot project\n  --timeout DURATION     Machine command timeout (default 10s)\n  --kind KIND            timer, gauge or counter\n  --path PATH            Exact metric path\n  --path-prefix PREFIX   Metric path prefix\n  --sort FIELD           p95, total, max, avg, p50, p99, latest or value\n  --limit COUNT          Maximum returned metrics\n  --raw, --traces        Include raw samples / recent traces\n  --file FILE            Read an offline snapshot (- reads stdin)\n  --budget FILE          Assert a JSON budget\n  --metric PATH          Metric path or key for assertions\n  --max-p95-usec NUMBER  --min-fps NUMBER  --max-frame-usec NUMBER\n  --for TYPE             Wait for snapshot, event, log or trace\n  --name NAME            Event name to wait for\n  --level LEVEL          Log level to wait for\n  --duration DURATION    Optional capture duration\n  --out DIRECTORY       Capture destination (default gdobs-capture)\n\nAuthentication: GDOBS_AUTH_TOKEN in the process environment only.\nDashboard: click tabs and rows; mouse wheel scrolls; Ctrl+C exits.\n";
+pub const HELP: &str = "gdobs: Godot observability CLI and Ratatui dashboard\n\nUsage: gdobs [watch|snapshot|capture|stream|status|wait|assert|diagnose|top|diff|version] [options]\n\n  --addr, --url URL       WebSocket endpoint (default ws://127.0.0.1:8765)\n  --env FILE             Endpoint settings from .env or .env.json\n  --project DIRECTORY    Discover endpoint settings in a Godot project\n  --timeout DURATION     Machine command timeout (default 10s)\n  --kind KIND            timer, gauge or counter\n  --path PATH            Exact metric path\n  --path-prefix PREFIX   Metric path prefix\n  --sort FIELD           p95, total, max, avg, p50, p99, latest or value\n  --limit COUNT          Maximum returned metrics\n  --raw, --traces        Include raw samples / recent traces\n  --file FILE            Read an offline snapshot (- reads stdin)\n  --budget FILE          Assert a JSON budget\n  --metric PATH          Metric path or key for assertions\n  --max-p95-usec NUMBER  --min-fps NUMBER  --max-frame-usec NUMBER\n  --for TYPE             Wait for snapshot, event, log or trace\n  --name NAME            Event name to wait for\n  --level LEVEL          Log level to wait for\n  --duration DURATION    Optional capture duration\n  --out DIRECTORY       Capture destination (default gdobs-capture)\n\nAuthentication: GDOBS_AUTH_TOKEN in the process environment only.\nMachine results: --json selects finite commands; snapshot/status/analysis already emit JSON. watch and stream retain their terminal/stream protocols.\nDashboard: click tabs and rows; mouse wheel scrolls; Ctrl+C exits.\n";
 
 impl Config {
     pub fn parse(args: &[String]) -> Result<Self> {
@@ -88,17 +90,18 @@ impl Config {
                 .trim_start_matches('-')
                 .split_once('=')
                 .map_or((arg.trim_start_matches('-'), None), |(k, v)| (k, Some(v)));
-            if matches!(key, "raw" | "traces") {
+            if matches!(key, "raw" | "traces" | "json") {
                 let value = match inline.unwrap_or("true").to_ascii_lowercase().as_str() {
                     "true" | "t" | "1" => true,
                     "false" | "f" | "0" => false,
                     _ => return Err(format!("invalid boolean for --{key}").into()),
                 };
-                if key == "raw" {
-                    cfg.raw = value;
-                } else {
-                    cfg.traces = value;
+                match key {
+                    "raw" => cfg.raw = value,
+                    "json" => cfg.json = value,
+                    _ => cfg.traces = value,
                 }
+
                 continue;
             }
             let value = inline

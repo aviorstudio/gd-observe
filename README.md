@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: a2b333eba44f74fb726d6bbbaca17ea093c3825903d634c55153a9fee35b0d98 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 9d03e22e44f10358f0cdfb5ed8875108e11fc153cc6ec1ac3a44fcddb8d627ee -->
 
 # gd-observe
 
@@ -280,3 +280,13 @@ mise run check
 `mise.toml` pins Rust 1.94.0 and owns tool versions and tasks. For a source-only CLI build, run `cargo build --release --locked --manifest-path cli/Cargo.toml`; the executable is `cli/target/release/gdobs` (`gdobs.exe` on Windows).
 
 `mise.toml` owns tool versions and tasks. Engine and template downloads are checksum verified. `mise run build` packages the addon; `mise run test` runs its declared tests. The complete check also validates the installed artifact. Build and test receipts stay in `.artifacts/verification`.
+
+## Contributor task interface
+
+Contributor tool versions and task entry points live in the native Mise configuration. Use `mise run lint` for source checks, `mise run test` for the applicable behavioral tests, and `mise run check` for the complete supported gate. `mise run clean` removes declared generated outputs while preserving source, credentials and retained data. This package has no separate Mise development service; use its native entry points directly.
+
+## Finite machine commands
+
+Use `gdobs --json version`, `gdobs --json snapshot`, or `gdobs --json assert --file snapshot.json --min-fps 60`. Finite snapshot, status, analysis and capture commands retain their existing typed JSON shapes. Each finite command emits one complete result; diagnostics use stderr and a failed operation or assertion exits nonzero. Offline assertions honor the explicit file without connecting to an endpoint.
+
+`watch` retains its Ratatui terminal interface and `stream` retains JSON Lines; they reject `--json` before connecting. Connection settings continue to use explicit flags, project discovery and environment configuration in the documented precedence.

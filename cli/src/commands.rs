@@ -9,10 +9,15 @@ use std::{
 };
 use tokio::time::{Instant, sleep_until};
 
+static EMITTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub fn output_emitted() -> bool {
+    EMITTED.load(std::sync::atomic::Ordering::Relaxed)
+}
 pub fn output(value: &impl Serialize) -> Result<()> {
     let mut out = io::stdout().lock();
     serde_json::to_writer_pretty(&mut out, value)?;
     writeln!(out)?;
+    EMITTED.store(true, std::sync::atomic::Ordering::Relaxed);
     Ok(())
 }
 
@@ -105,12 +110,20 @@ fn duration_string(duration: Duration) -> String {
 pub async fn run(config: &Config) -> Result<()> {
     match config.command.as_str() {
         "watch" => return crate::ui::run(config).await,
-        "version" => println!(
-            "gdobs {} ({}, {})",
-            env!("GDOBS_VERSION"),
-            env!("GDOBS_COMMIT"),
-            env!("GDOBS_DATE")
-        ),
+        "version" => {
+            if config.json {
+                output(
+                    &json!({"version":env!("GDOBS_VERSION"),"commit":env!("GDOBS_COMMIT"),"date":env!("GDOBS_DATE")}),
+                )?;
+            } else {
+                println!(
+                    "gdobs {} ({}, {})",
+                    env!("GDOBS_VERSION"),
+                    env!("GDOBS_COMMIT"),
+                    env!("GDOBS_DATE")
+                );
+            }
+        }
         "snapshot" => output(
             &transport::snapshot(
                 &config.addr,
@@ -184,7 +197,7 @@ pub async fn run(config: &Config) -> Result<()> {
             }
         }
         "assert" => {
-            let snapshot: Snapshot = if !config.budget.is_empty() && !config.file.is_empty() {
+            let snapshot: Snapshot = if !config.file.is_empty() {
                 load(&config.file)?
             } else {
                 transport::snapshot(&config.addr, config.timeout, None).await?

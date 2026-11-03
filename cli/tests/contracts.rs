@@ -271,3 +271,31 @@ async fn capture_produces_all_summary_artifacts() {
             .contains("combat.tick")
     );
 }
+
+#[tokio::test]
+async fn machine_commands_emit_once_and_never_enter_the_dashboard() {
+    let version = output(&mut cli(&["--json", "version"])).await;
+    assert!(version.status.success());
+    let value: Value = serde_json::from_slice(&version.stdout).unwrap();
+    assert!(value["version"].is_string());
+    let dashboard = output(&mut cli(&["--json", "watch"])).await;
+    assert_eq!(dashboard.status.code(), Some(2));
+    let value: Value = serde_json::from_slice(&dashboard.stdout).unwrap();
+    assert_eq!(value["error"]["code"], "invalid_usage");
+    let root = Temp::new();
+    let snapshot = root.0.join("offline.json");
+    fs::write(&snapshot, br#"{"runtime":{"fps":12}}"#).unwrap();
+    let checked = output(&mut cli(&[
+        "--json",
+        "assert",
+        "--file",
+        snapshot.to_str().unwrap(),
+        "--min-fps",
+        "60",
+    ]))
+    .await;
+    assert_eq!(checked.status.code(), Some(1));
+    let value: Value = serde_json::from_slice(&checked.stdout).unwrap();
+    assert_eq!(value["ok"], false);
+    assert_eq!(value["failures"].as_array().unwrap().len(), 1);
+}
