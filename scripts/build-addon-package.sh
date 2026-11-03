@@ -2,8 +2,8 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source_dir="$root/gd/addon"
-manifest="$root/gd/package-manifest.txt"
+source_dir="$root/./addon"
+manifest="$root/scripts/package/manifest.txt"
 output="${1:-$root/dist/@aviorstudio_gd-observe.zip}"
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
@@ -17,7 +17,7 @@ fi
 actual="$stage/actual.txt"
 (cd "$source_dir" && find . -type f -printf '%P\n' | LC_ALL=C sort) > "$actual"
 if ! diff -u "$manifest" "$actual"; then
-  echo "Package contents differ from gd/package-manifest.txt" >&2
+  echo "Package contents differ from scripts/package/manifest.txt" >&2
   exit 1
 fi
 

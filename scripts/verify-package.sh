@@ -3,7 +3,7 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 archive="${1:-$root/dist/@aviorstudio_gd-observe.zip}"
-manifest="$root/gd/package-manifest.txt"
+manifest="$root/scripts/package/manifest.txt"
 
 test -f "$archive"
 python3 - "$archive" "$manifest" <<'PY'

@@ -9,7 +9,7 @@ mkdir -p "$scratch"
 if [ -z "${LIFECYCLE_TMP:-}" ]; then
   trap 'rm -rf "$scratch"' EXIT
 fi
-allowlist="$root/gd/tests/editor-log-allowlist.txt"
+allowlist="$root/tests/godot/editor-log-allowlist.txt"
 
 checked_editor() {
   label="$1"
@@ -94,7 +94,7 @@ GD
 
 owned="$scratch/owned"
 make_fixture "$owned"
-installed_digest="$(cd "$owned/addons/@aviorstudio_gd-observe" && while IFS= read -r path; do sha256sum "$path"; done < "$root/gd/package-manifest.txt" | sha256sum | cut -d' ' -f1)"
+installed_digest="$(cd "$owned/addons/@aviorstudio_gd-observe" && while IFS= read -r path; do sha256sum "$path"; done < "$root/scripts/package/manifest.txt" | sha256sum | cut -d' ' -f1)"
 echo "Installed tree SHA-256: $installed_digest"
 cat > "$owned/project.godot" <<'CFG'
 [application]

@@ -91,7 +91,7 @@ jobs:
           exit 1
         fi
         if [ "$TARGET" = gd ]; then
-          plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' gd/addon/plugin.cfg | head -n 1)"
+          plugin_version="$(sed -n -E 's/^version="([^"]+)"/\1/p' addon/plugin.cfg | head -n 1)"
           test "$plugin_version" = "$version" || { echo "plugin.cfg=$plugin_version next=$version" >&2; exit 1; }
         fi
         printf 'version=%s\ntag=%s\ndate=%s\n' "$version" "$tag" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
