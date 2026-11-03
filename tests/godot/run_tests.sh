@@ -2,7 +2,7 @@
 set -euo pipefail
 
 script_dir="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
-root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 godot="${GODOT_BIN:-godot}"
 timeout_seconds="${GODOT_TEST_TIMEOUT_SECONDS:-30}"
 log_dir="$(mktemp -d)"
