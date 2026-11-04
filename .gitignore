@@ -1,10 +1,7 @@
 .DS_Store
 .artifacts/
 dist/
-cli/gdobs
-cli/bin/
 /.ci-tools/
 
-cli/target/
 
 __pycache__/

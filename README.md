@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: e1cf8201a50f3b797ece0c284ee7993fd36be2dfbe71528f9959963ebccdc37a -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 37671d0d96f31c0e2172f018bbb3454882d1881e574e34c743344627e2aa633b -->
 
 # gd-observe
 
@@ -23,7 +23,7 @@ The plugin registers a `GdObserve` autoload when enabled.
 Linux and macOS, x86_64 or arm64:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/aviorstudio/gd-observe/main/cli/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/aviorstudio/gd-observe-cli/main/scripts/install.sh | sh
 ```
 
 The installer selects a published `cli-v` release, verifies the archive checksum and installs `gdobs` into `~/.local/bin`. Rust is not required to run the release binary. Use `--version` or `--install-dir` through `sh -s --` for a specific release or destination. The addon is installed separately.
@@ -120,7 +120,7 @@ func _ready() -> void:
 
 Runtime monitors are sampled on the snapshot cadence, not every frame. A positive cadence has a 50 ms minimum. A zero or negative cadence disables periodic sampling and broadcast; connection and explicit `snapshot_request` responses still take one fresh sample.
 
-The defaults are disabled at the bootstrap layer and loopback-only at the server layer. Non-loopback binding is rejected unless code explicitly sets `allow_non_loopback=true` and supplies a nonempty runtime token. The client must send `{"type":"auth","token":"..."}` within 5 seconds before the server sends any data. The token is not an exported Resource field and `.env.json` does not load it. The bundled CLI can read it from the process-only `GDOBS_AUTH_TOKEN` environment variable.
+The defaults are disabled at the bootstrap layer and loopback-only at the server layer. Non-loopback binding is rejected unless code explicitly sets `allow_non_loopback=true` and supplies a nonempty runtime token. The client must send `{"type":"auth","token":"..."}` within 5 seconds before the server sends any data. The token is not an exported Resource field and `.env.json` does not load it. The companion CLI can read it from the process-only `GDOBS_AUTH_TOKEN` environment variable.
 
 For non-loopback clients, `allowed_tag_keys` and `allowed_field_keys` are exact game-payload allowlists; non-allowlisted tag/field entries are omitted. Empty allowlists expose no game tag/field entries. This is an explicit allowlist, **not** a generic promise to detect every possible secret. Callers remain responsible for approving both allowed keys and their values.
 
@@ -250,7 +250,7 @@ The response is a `snapshot` with the same `request_id`.
 - `MetricsModule`: RefCounted collector for tests or custom wrappers.
 - `MetricsRuntimeSampler`: Godot `Performance` monitor sampler.
 - `MetricsLiveServer`: localhost WebSocket snapshot server.
-- `cli/`: Rust CLI and Ratatui terminal UI.
+- [`gd-observe-cli`](https://github.com/aviorstudio/gd-observe-cli): separately installed Rust CLI and Ratatui terminal UI.
 
 Useful `GdObserve` methods include `push_context()`, `pop_context()`, `context_tags()`, `begin_span()`, `checkpoint_runtime()`, `export_snapshot_filtered()`, and `diagnose_metrics()`.
 
@@ -277,7 +277,7 @@ mise install
 mise run check
 ```
 
-`mise.toml` pins Rust 1.94.0 and owns tool versions and tasks. For a source-only CLI build, run `cargo build --release --locked --manifest-path cli/Cargo.toml`; the executable is `cli/target/release/gdobs` (`gdobs.exe` on Windows).
+`mise.toml` owns addon tool versions and tasks. Build and install the Rust companion from [gd-observe-cli](https://github.com/aviorstudio/gd-observe-cli).
 
 `mise.toml` owns tool versions and tasks. Engine and template downloads are checksum verified. `mise run build` packages the addon; `mise run test` runs its declared tests. The complete check also validates the installed artifact. Build and test receipts stay in `.artifacts/verification`.
 

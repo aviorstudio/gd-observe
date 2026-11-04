@@ -14,6 +14,3 @@ test -f addon/presets/debug_live_server_config.tres
 test -f addon/examples/app_shell/observe_example_main.tscn
 test -f addon/examples/app_shell/observe_example_main.gd
 test -f scripts/package/manifest.txt
-test -f cli/Cargo.toml
-cargo fmt --manifest-path cli/Cargo.toml --check
-cargo clippy --locked --manifest-path cli/Cargo.toml --all-targets -- -D warnings
