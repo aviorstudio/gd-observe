@@ -1,0 +1,34 @@
+version = 1
+recipe = "godot-addon"
+
+[package]
+source = "addon"
+manifest = "package.files"
+archive = "dist/@aviorstudio_gd-observe.zip"
+
+[lint]
+required_paths = ["addon/plugin.cfg", "addon/plugin.gd", "addon/autoload.gd", "addon/src/metrics_module.gd", "addon/src/metrics_live_server.gd", "addon/src/metrics_runtime_sampler.gd", "addon/src/observe_config.gd", "addon/src/observe_live_server_config.gd", "addon/src/observe_bootstrap.gd", "addon/presets/debug_observe_config.tres", "addon/presets/debug_live_server_config.tres", "addon/examples/app_shell/observe_example_main.tscn", "addon/examples/app_shell/observe_example_main.gd", "package.files"]
+
+[format]
+paths = ["addon", "tests/godot"]
+
+[clean]
+paths = ["dist", ".artifacts/build", ".artifacts/godot", ".artifacts/godot-data", ".artifacts/tmp", ".godot"]
+
+[[tests.unit]]
+runner = "bash"
+path = "tests/godot/test_runner_controls.sh"
+
+[[tests.unit]]
+runner = "godot-suite"
+path = "tests/godot"
+sentinel = "PASS gd-observe"
+timeout = 30
+
+[[tests.integration]]
+runner = "bash"
+path = "tests/godot/editor_lifecycle_test.sh"
+
+[publication]
+tag_prefix = "gd-v"
+initial = "bump"

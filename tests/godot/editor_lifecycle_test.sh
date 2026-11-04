@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 archive="${1:-$root/dist/@aviorstudio_gd-observe.zip}"
 godot="${GODOT_BIN:-godot}"
 scratch="${LIFECYCLE_TMP:-$(mktemp -d)}"
@@ -94,7 +94,7 @@ GD
 
 owned="$scratch/owned"
 make_fixture "$owned"
-installed_digest="$(cd "$owned/addons/@aviorstudio_gd-observe" && while IFS= read -r path; do sha256sum "$path"; done < "$root/scripts/package/manifest.txt" | sha256sum | cut -d' ' -f1)"
+installed_digest="$(cd "$owned/addons/@aviorstudio_gd-observe" && while IFS= read -r path; do sha256sum "$path"; done < "$root/package.files" | sha256sum | cut -d' ' -f1)"
 echo "Installed tree SHA-256: $installed_digest"
 cat > "$owned/project.godot" <<'CFG'
 [application]
