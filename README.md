@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 37671d0d96f31c0e2172f018bbb3454882d1881e574e34c743344627e2aa633b -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: f3809bbf1b5e95701dfe92253642866115542c0cc8edc122c452f779f53454f6 -->
 
 # gd-observe
 
@@ -26,7 +26,7 @@ Linux and macOS, x86_64 or arm64:
 curl -fsSL https://raw.githubusercontent.com/aviorstudio/gd-observe-cli/main/scripts/install.sh | sh
 ```
 
-The installer selects a published `cli-v` release, verifies the archive checksum and installs `gdobs` into `~/.local/bin`. Rust is not required to run the release binary. Use `--version` or `--install-dir` through `sh -s --` for a specific release or destination. The addon is installed separately.
+The installer selects a published `cli-v` release, verifies the archive checksum and installs `gd-observe-cli` into `~/.local/bin`. Rust is not required to run the release binary. Use `--version` or `--install-dir` through `sh -s --` for a specific release or destination. The addon is installed separately.
 
 ## Quick Start
 
@@ -129,7 +129,7 @@ The default total metric-series bound is 1,024 across timers, gauges, and counte
 Then run the terminal UI:
 
 ```sh
-gdobs watch --addr ws://127.0.0.1:8765
+gd-observe-cli watch --addr ws://127.0.0.1:8765
 ```
 
 The Rust/Ratatui TUI is mouse-first. Use the top tabs for `Dashboard`, `Logs`, `Events`, and `Traces`; click rows in stream tabs to inspect structured details; use mouse wheel or trackpad scrolling for long views. `ctrl+c` exits the terminal program. Keyboard navigation is also available: `Tab` or `1`–`4` switches tabs, arrow keys select rows, and `PageUp` / `PageDown` moves through longer lists.
@@ -137,22 +137,22 @@ The Rust/Ratatui TUI is mouse-first. Use the top tabs for `Dashboard`, `Logs`, `
 Machine-readable modes:
 
 ```sh
-gdobs snapshot --url ws://127.0.0.1:8765
-gdobs snapshot --env godot_client/.env.json
-gdobs status --project .
-gdobs snapshot --kind timer --path-prefix CardPresentation --sort p95 --limit 20
-gdobs stream --url ws://127.0.0.1:8765
-gdobs status --url ws://127.0.0.1:8765
-gdobs wait --for event --name match.route_loaded --timeout 10s
-gdobs assert --metric BoardVisualService.hex_screen_resolve --max-p95-usec 16666
-gdobs assert --budget metrics-budget.json
-gdobs diagnose --url ws://127.0.0.1:8765
-gdobs capture --duration 30s --out artifacts/run-001
-gdobs top timers --file artifacts/run-001/snapshot.json --sort p95 --limit 20
-gdobs diff before.json after.json
+gd-observe-cli snapshot --url ws://127.0.0.1:8765
+gd-observe-cli snapshot --env godot_client/.env.json
+gd-observe-cli status --project .
+gd-observe-cli snapshot --kind timer --path-prefix CardPresentation --sort p95 --limit 20
+gd-observe-cli stream --url ws://127.0.0.1:8765
+gd-observe-cli status --url ws://127.0.0.1:8765
+gd-observe-cli wait --for event --name match.route_loaded --timeout 10s
+gd-observe-cli assert --metric BoardVisualService.hex_screen_resolve --max-p95-usec 16666
+gd-observe-cli assert --budget metrics-budget.json
+gd-observe-cli diagnose --url ws://127.0.0.1:8765
+gd-observe-cli capture --duration 30s --out artifacts/run-001
+gd-observe-cli top timers --file artifacts/run-001/snapshot.json --sort p95 --limit 20
+gd-observe-cli diff before.json after.json
 ```
 
-Endpoint resolution order is explicit URL first, then project/env discovery, then `ws://127.0.0.1:8765`. Use `--env path/to/.env.json` or `--project path/to/repo` when running multiple games locally. Supported env keys are `gdobs_url`, or `gdobs_port` with optional `gdobs_host`; `.env` files may also use `GDOBS_URL`, or `GDOBS_PORT` with optional `GDOBS_HOST`. If host is omitted, `gdobs` uses `127.0.0.1`.
+Endpoint resolution order is explicit URL first, then project/env discovery, then `ws://127.0.0.1:8765`. Use `--env path/to/.env.json` or `--project path/to/repo` when running multiple games locally. Supported env keys are `gdobs_url`, or `gdobs_port` with optional `gdobs_host`; `.env` files may also use `GDOBS_URL`, or `GDOBS_PORT` with optional `GDOBS_HOST`. If host is omitted, `gd-observe-cli` uses `127.0.0.1`.
 
 The WebSocket protocol is read-only from the CLI perspective. Godot streams `hello`, periodic lightweight `snapshot`, explicit `log`, explicit `event`, and timer-generated `frame_trace` messages. Clients may send `snapshot_request` messages to request filtered read-only snapshots; these do not mutate game state.
 
@@ -287,6 +287,6 @@ Contributor tool versions and task entry points live in the native Mise configur
 
 ## Finite machine commands
 
-Use `gdobs --json version`, `gdobs --json snapshot`, or `gdobs --json assert --file snapshot.json --min-fps 60`. Finite snapshot, status, analysis and capture commands retain their existing typed JSON shapes. Each finite command emits one complete result; diagnostics use stderr and a failed operation or assertion exits nonzero. Offline assertions honor the explicit file without connecting to an endpoint.
+Use `gd-observe-cli --json version`, `gd-observe-cli --json snapshot`, or `gd-observe-cli --json assert --file snapshot.json --min-fps 60`. Finite snapshot, status, analysis and capture commands retain their existing typed JSON shapes. Each finite command emits one complete result; diagnostics use stderr and a failed operation or assertion exits nonzero. Offline assertions honor the explicit file without connecting to an endpoint.
 
 `watch` retains its Ratatui terminal interface and `stream` retains JSON Lines; they reject `--json` before connecting. Connection settings continue to use explicit flags, project discovery and environment configuration in the documented precedence.
