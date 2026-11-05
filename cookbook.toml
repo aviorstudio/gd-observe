@@ -10,7 +10,7 @@ archive = "dist/@aviorstudio_gd-observe.zip"
 required_paths = ["addon/plugin.cfg", "addon/plugin.gd", "addon/autoload.gd", "addon/src/metrics_module.gd", "addon/src/metrics_live_server.gd", "addon/src/metrics_runtime_sampler.gd", "addon/src/observe_config.gd", "addon/src/observe_live_server_config.gd", "addon/src/observe_bootstrap.gd", "addon/presets/debug_observe_config.tres", "addon/presets/debug_live_server_config.tres", "addon/examples/app_shell/observe_example_main.tscn", "addon/examples/app_shell/observe_example_main.gd", "package.files"]
 
 [format]
-paths = ["addon", "tests/godot"]
+paths = ["addon", "tests/godot/example_without_autoload_test.gd", "tests/godot/metrics_autoload_test.gd", "tests/godot/metrics_live_server_test.gd", "tests/godot/metrics_module_test.gd", "tests/godot/metrics_runtime_sampler_test.gd", "tests/godot/observe_bootstrap_test.gd", "tests/godot/observe_resources_test.gd"]
 
 [clean]
 paths = ["dist", ".artifacts/build", ".artifacts/godot", ".artifacts/godot-data", ".artifacts/tmp", ".godot"]
