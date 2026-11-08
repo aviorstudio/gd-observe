@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: c22ad4dce2750f19aec817dd9627a460f64eb630e4ee6e5e527910eba51a633a -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 6f37e912d9d0cc7afd4783cd31bb9e2f6a758753b261f01236e78492f9f56ee4 -->
 
 # gd-observe
 
@@ -271,17 +271,17 @@ See `LICENSE`.
 Install [mise](https://mise.jdx.dev/), Git, GNU Make and Python 3.11 or newer, then run:
 
 ```sh
-make help
-make setup
-make build
-make test
+mise run help
+mise run setup
+mise run build
+mise run test
 ```
 
-`make setup` fetches the cookbook at the exact source pinned in `Makefile` and installs the declared SDKs and checksum-verified Godot engine/templates. `mise.toml` owns tool versions; `cookbook.toml` declares package inputs and native test entrypoints. The Makefile and workflow callers are generated from the shared cookbook.
+`mise run setup` fetches the cookbook at the exact source pinned in the generated `mise.toml` task block and installs the declared SDKs and checksum-verified Godot engine/templates. `mise.toml` owns tool versions; `cookbook.toml` declares package inputs and native test entrypoints. The root Mise tasks and workflow callers are generated from the shared cookbook.
 
-`make build` produces and validates the closed-manifest addon ZIP and checksum. `make test` runs source/configuration checks, native Godot behavior and failure controls, packaged editor lifecycle acceptance and tracked-source security checks. It requires an existing current build for integration checks and never builds one implicitly. Individual groups are available as `make test:lint`, `make test:unit`, `make test:integration` and `make test:security`. Build and fresh test-session evidence stays in `.artifacts/verification`.
+`mise run build` produces and validates the closed-manifest addon ZIP and checksum. `mise run test` runs source/configuration checks, native Godot behavior and failure controls, packaged editor lifecycle acceptance and tracked-source security checks. It requires an existing current build for integration checks and never builds one implicitly. Individual groups are available as `mise run test:lint`, `mise run test:unit`, `mise run test:integration` and `mise run test:security`. Build and fresh test-session evidence stays in `.artifacts/verification`.
 
-`make fmt` applies native GDScript formatting. `make clean` removes declared generated outputs while preserving source, credentials and retained data. Build and install the Rust companion from [gd-observe-cli](https://github.com/aviorstudio/gd-observe-cli).
+`mise run fmt` applies native GDScript formatting. `mise run clean` removes declared generated outputs while preserving source, credentials and retained data. Build and install the Rust companion from [gd-observe-cli](https://github.com/aviorstudio/gd-observe-cli).
 
 The **Request merge** workflow accepts a PR number, validates its exact head with the current main base, and merges automatically after full acceptance while those identities remain current. It requests a separate check of the exact final main revision. During adoption, full checks continue on PR pushes until this merge path is enabled. **Release** remains a separate explicit dispatch from `main`; the committed addon version must already match the next `gd-v` release.
 
