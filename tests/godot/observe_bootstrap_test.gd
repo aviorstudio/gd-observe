@@ -53,16 +53,22 @@ func _test_bootstrap_warnings(failures: Array[String]) -> void:
 	bootstrap.free()
 
 func _test_env_overrides(failures: Array[String]) -> void:
-	var path := "user://gd_observe_env_test.json"
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	file.store_string(JSON.stringify({"gdobs_host": "127.0.0.1", "gdobs_port": 4567}))
-	file.close()
+	var old_environment: Dictionary = {}
+	for key: String in ["GDOBS_HOST", "GDOBS_PORT"]:
+		if OS.has_environment(key):
+			old_environment[key] = OS.get_environment(key)
+	OS.set_environment("GDOBS_HOST", "127.0.0.1")
+	OS.set_environment("GDOBS_PORT", "4567")
 	var bootstrap := ObserveBootstrap.new()
-	bootstrap.env_path = path
 	var overrides: Dictionary = bootstrap._load_env_overrides()
 	if str(overrides.get("host", "")) != "127.0.0.1" or int(overrides.get("port", 0)) != 4567:
-		failures.append("ObserveBootstrap: expected env host/port overrides")
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+		failures.append("ObserveBootstrap: expected process host/port overrides")
+	OS.unset_environment("GDOBS_HOST")
+	OS.unset_environment("GDOBS_PORT")
+	if not bootstrap._load_env_overrides().is_empty():
+		failures.append("ObserveBootstrap: unset process overrides must preserve resource defaults")
+	for key: String in old_environment:
+		OS.set_environment(key, old_environment[key])
 	bootstrap.free()
 
 func _add_observe_autoload() -> MetricsAutoload:

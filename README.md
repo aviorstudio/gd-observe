@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 6f37e912d9d0cc7afd4783cd31bb9e2f6a758753b261f01236e78492f9f56ee4 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: c0f4f2caacada208c798631769dc2661644e9303269811fad052beed446b57bf -->
 
 # gd-observe
 
@@ -41,7 +41,7 @@ Main
     context_tags = { "game": "my_game" }
 ```
 
-`ObserveBootstrap` configures the `GdObserve` autoload on scene ready, applies shared context tags, can start the live server in debug builds, and reads optional `gdobs_host` / `gdobs_port` overrides from `res://.env.json`.
+`ObserveBootstrap` configures the `GdObserve` autoload on scene ready, applies shared context tags, can start the live server in debug builds, and reads optional `GDOBS_HOST` / `GDOBS_PORT` overrides from the process environment. Keep public local defaults in Mise.
 
 An installable example scene is included at:
 
@@ -120,7 +120,7 @@ func _ready() -> void:
 
 Runtime monitors are sampled on the snapshot cadence, not every frame. A positive cadence has a 50 ms minimum. A zero or negative cadence disables periodic sampling and broadcast; connection and explicit `snapshot_request` responses still take one fresh sample.
 
-The defaults are disabled at the bootstrap layer and loopback-only at the server layer. Non-loopback binding is rejected unless code explicitly sets `allow_non_loopback=true` and supplies a nonempty runtime token. The client must send `{"type":"auth","token":"..."}` within 5 seconds before the server sends any data. The token is not an exported Resource field and `.env.json` does not load it. The companion CLI can read it from the process-only `GDOBS_AUTH_TOKEN` environment variable.
+The defaults are disabled at the bootstrap layer and loopback-only at the server layer. Non-loopback binding is rejected unless code explicitly sets `allow_non_loopback=true` and supplies a nonempty runtime token. The client must send `{"type":"auth","token":"..."}` within 5 seconds before the server sends any data. The token is not an exported Resource field and endpoint overrides do not load it. The companion CLI can read it from the process-only `GDOBS_AUTH_TOKEN` environment variable.
 
 For non-loopback clients, `allowed_tag_keys` and `allowed_field_keys` are exact game-payload allowlists; non-allowlisted tag/field entries are omitted. Empty allowlists expose no game tag/field entries. This is an explicit allowlist, **not** a generic promise to detect every possible secret. Callers remain responsible for approving both allowed keys and their values.
 
@@ -138,21 +138,20 @@ Machine-readable modes:
 
 ```sh
 gd-observe-cli snapshot --url ws://127.0.0.1:8765
-gd-observe-cli snapshot --env godot_client/.env.json
-gd-observe-cli status --project .
+mise exec -- gd-observe-cli snapshot
 gd-observe-cli snapshot --kind timer --path-prefix CardPresentation --sort p95 --limit 20
 gd-observe-cli stream --url ws://127.0.0.1:8765
 gd-observe-cli status --url ws://127.0.0.1:8765
 gd-observe-cli wait --for event --name match.route_loaded --timeout 10s
 gd-observe-cli assert --metric BoardVisualService.hex_screen_resolve --max-p95-usec 16666
-gd-observe-cli assert --budget metrics-budget.json
+gd-observe-cli assert --budget metrics-budget.toml
 gd-observe-cli diagnose --url ws://127.0.0.1:8765
 gd-observe-cli capture --duration 30s --out artifacts/run-001
 gd-observe-cli top timers --file artifacts/run-001/snapshot.json --sort p95 --limit 20
 gd-observe-cli diff before.json after.json
 ```
 
-Endpoint resolution order is explicit URL first, then project/env discovery, then `ws://127.0.0.1:8765`. Use `--env path/to/.env.json` or `--project path/to/repo` when running multiple games locally. Supported env keys are `gdobs_url`, or `gdobs_port` with optional `gdobs_host`; `.env` files may also use `GDOBS_URL`, or `GDOBS_PORT` with optional `GDOBS_HOST`. If host is omitted, `gd-observe-cli` uses `127.0.0.1`.
+Endpoint resolution order is an explicit `--url` / `--addr`, then process `GDOBS_URL`, then `ws://127.0.0.1:8765`. Set `GDOBS_URL` in Mise when working on multiple games locally. The CLI does not discover endpoint files.
 
 The WebSocket protocol is read-only from the CLI perspective. Godot streams `hello`, periodic lightweight `snapshot`, explicit `log`, explicit `event`, and timer-generated `frame_trace` messages. Clients may send `snapshot_request` messages to request filtered read-only snapshots; these do not mutate game state.
 
