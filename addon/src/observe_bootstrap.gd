@@ -22,7 +22,6 @@ enum LiveServerMode { DISABLED, DEBUG_NON_WEB, DEBUG, ALWAYS }
 		live_server_mode = value
 		update_configuration_warnings()
 @export var context_tags: Dictionary = {}
-@export var env_path: String = "res://.env.json"
 @export var emit_bootstrap_event: bool = true
 
 func _ready() -> void:
@@ -95,23 +94,8 @@ func _get_observe() -> Node:
 
 func _load_env_overrides() -> Dictionary:
 	var overrides: Dictionary = {}
-	var path := env_path.strip_edges()
-	if path.is_empty() or not FileAccess.file_exists(path):
-		return overrides
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		return overrides
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	file.close()
-	if not (parsed is Dictionary):
-		return overrides
-	var env: Dictionary = parsed
-	if env.has("gdobs_host"):
-		overrides["host"] = str(env.get("gdobs_host", ""))
-	elif env.has("GDOBS_HOST"):
-		overrides["host"] = str(env.get("GDOBS_HOST", ""))
-	if env.has("gdobs_port"):
-		overrides["port"] = int(env.get("gdobs_port", 0))
-	elif env.has("GDOBS_PORT"):
-		overrides["port"] = int(env.get("GDOBS_PORT", 0))
+	if OS.has_environment("GDOBS_HOST"):
+		overrides["host"] = OS.get_environment("GDOBS_HOST")
+	if OS.has_environment("GDOBS_PORT"):
+		overrides["port"] = int(OS.get_environment("GDOBS_PORT"))
 	return overrides
